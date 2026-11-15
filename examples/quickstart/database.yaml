@@ -1,0 +1,40 @@
+# The database whose backups we check. "archive" is the ObjectStore it writes
+# WAL and backups to. "restore-source" points at the same bucket and is the
+# one the RestoreCheck uses; in production it would have read-only credentials.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: archive
+spec:
+  configuration:
+    destinationPath: s3://backups/
+    endpointURL: http://s3:9000
+    s3Credentials:
+      accessKeyId: {name: s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: s3, key: ACCESS_SECRET_KEY}
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: restore-source
+spec:
+  configuration:
+    destinationPath: s3://backups/
+    endpointURL: http://s3:9000
+    s3Credentials:
+      accessKeyId: {name: s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: s3, key: ACCESS_SECRET_KEY}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: shop
+spec:
+  instances: 1
+  storage:
+    size: 1Gi
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: archive

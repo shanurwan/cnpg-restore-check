@@ -338,8 +338,7 @@ func TestScheduleAndManualTrigger(t *testing.T) {
 	e := newEnv(t, objectStore("readonly"), restoreCheck(func(rc *v1alpha1.RestoreCheck) {
 		rc.Spec.Schedule = "0 4 * * *"
 	}))
-	// Created 2026-11-14 00:00, so the first slot (04:00 that day) has passed
-	// by 2026-11-15 03:00: one run starts now, not one per missed slot.
+	// A new scheduled check runs once right away.
 	name := e.startRun()
 	e.markReady(name)
 	e.reconcile()
@@ -459,5 +458,37 @@ func TestStaleStartTouchesNothing(t *testing.T) {
 	_ = e.c.List(context.Background(), list, client.InNamespace(ns))
 	if len(list.Items) != 1 {
 		t.Fatalf("a stale reconcile must not create clusters, found %d", len(list.Items))
+	}
+}
+
+func TestNewScheduledCheckRunsImmediatelyThenFollowsSchedule(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck(func(rc *v1alpha1.RestoreCheck) {
+		rc.Spec.Schedule = "0 * * * *"
+		rc.CreationTimestamp = metav1.NewTime(time.Date(2026, 11, 15, 2, 59, 0, 0, time.UTC))
+	}))
+	e.now = time.Date(2026, 11, 15, 3, 10, 0, 0, time.UTC)
+	name := e.startRun()
+	e.markReady(name)
+	e.reconcile()
+	e.reconcile()
+	e.now = e.now.Add(5 * time.Minute)
+	e.reconcile()
+	st := e.get().Status
+	if st.CurrentRun != nil {
+		t.Fatal("after the first run, the next one waits for the schedule")
+	}
+	if want := time.Date(2026, 11, 15, 4, 0, 0, 0, time.UTC); st.NextRunTime == nil || !st.NextRunTime.Time.Equal(want) {
+		t.Fatalf("next run = %v, want %v", st.NextRunTime, want)
+	}
+}
+
+func TestSuspendedNewCheckDoesNotRun(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck(func(rc *v1alpha1.RestoreCheck) {
+		rc.Spec.Schedule = "0 * * * *"
+		rc.Spec.Suspend = true
+	}))
+	e.reconcile()
+	if e.get().Status.CurrentRun != nil {
+		t.Fatal("a suspended check must not start")
 	}
 }

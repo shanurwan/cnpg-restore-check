@@ -1,0 +1,79 @@
+# A throwaway S3 server (RustFS) for the quickstart. Not for production.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3
+stringData:
+  ACCESS_KEY_ID: quickstart
+  ACCESS_SECRET_KEY: quickstart-secret
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3
+spec:
+  selector:
+    app: s3
+  ports:
+    - port: 9000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: s3
+  template:
+    metadata:
+      labels:
+        app: s3
+    spec:
+      initContainers:
+        - name: init
+          image: docker.io/library/busybox:1.37
+          command: ["sh", "-c", "mkdir -p /data/rustfs /data/rustfs/backups /logs/rustfs && chmod -R 0777 /data/rustfs /logs/rustfs"]
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: logs, mountPath: /logs}
+      containers:
+        - name: s3
+          image: docker.io/rustfs/rustfs@sha256:f9697e5401145bc3bc3926ea0ab3b39b0dabf8a4e8c28b125dde62cf264350e7 # 1.0.5-glibc
+          command: ["/usr/bin/rustfs"]
+          env:
+            - {name: RUSTFS_ADDRESS, value: ":9000"}
+            - {name: RUSTFS_VOLUMES, value: /data/rustfs}
+            - {name: RUSTFS_REGION, value: us-east-1}
+            - {name: RUSTFS_CONSOLE_ENABLE, value: "false"}
+            - {name: RUSTFS_OBS_LOG_DIRECTORY, value: /logs/rustfs}
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: s3, key: ACCESS_KEY_ID}}
+            - name: RUSTFS_SECRET_KEY
+              valueFrom: {secretKeyRef: {name: s3, key: ACCESS_SECRET_KEY}}
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            httpGet: {path: /health, port: 9000}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: logs, mountPath: /logs}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: s3}
+        - name: logs
+          emptyDir: {}

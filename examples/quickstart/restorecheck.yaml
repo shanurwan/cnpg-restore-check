@@ -1,0 +1,25 @@
+apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+kind: RestoreCheck
+metadata:
+  name: shop
+spec:
+  schedule: "0 * * * *"   # hourly; the first run starts right away
+  source:
+    objectStoreName: restore-source
+    serverName: shop
+  cluster:
+    storageSize: 1Gi
+  checks:
+    amcheck:
+      heap: true
+    sql:
+      - name: orders-restored
+        database: app
+        query: "select count(*) = 1000 from orders"
+    freshness:
+      database: app
+      query: "select max(ts) from heartbeat"
+  objectives:
+    recoveryTime: 10m
+    dataAge: 10m
+    successAge: 2h

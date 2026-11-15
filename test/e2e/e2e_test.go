@@ -82,7 +82,12 @@ func eventually(t *testing.T, timeout time.Duration, what string, f func() (bool
 
 func psql(t *testing.T, sql string) string {
 	t.Helper()
-	out := must(t, "", "exec", "-n", ns, "src-1", "-c", "postgres", "--",
+	return psqlOn(t, "src-1", sql)
+}
+
+func psqlOn(t *testing.T, pod, sql string) string {
+	t.Helper()
+	out := must(t, "", "exec", "-n", ns, pod, "-c", "postgres", "--",
 		"psql", "-q", "-v", "ON_ERROR_STOP=1", "-d", "app", "-tAc", sql)
 	return strings.TrimSpace(out)
 }
@@ -245,6 +250,10 @@ func TestRestoreChecks(t *testing.T) {
 		if err != nil || age < 50*time.Minute {
 			t.Fatalf("data age should be about an hour, got %q", s.DataAge)
 		}
+	})
+
+	t.Run("quiet database: standby backup is not restorable until WAL switches (plugin-barman-cloud#652)", func(t *testing.T) {
+		quietStandbyBackup(t)
 	})
 
 	t.Run("unknown server name fails recovery", func(t *testing.T) {
@@ -450,4 +459,134 @@ spec:
 	seg := psql(t, "insert into heartbeat values (now()); select pg_walfile_name(pg_current_wal_insert_lsn())")
 	psql(t, "select pg_switch_wal()")
 	waitArchived(t, seg)
+}
+
+// quietStandbyBackup reproduces plugin-barman-cloud#652: on a database with no
+// writes, a backup taken from a standby ends in a WAL segment that nothing
+// archives, so the "completed" backup cannot be restored. A restore check
+// reports it; after a WAL switch on the primary the same check passes.
+func quietStandbyBackup(t *testing.T) {
+	apply(t, `apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: quiet
+spec:
+  instances: 2
+  storage:
+    size: 1Gi
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: rw-store
+`)
+	eventually(t, 10*time.Minute, "cluster quiet ready", func() (bool, string) {
+		out, _ := kubectl(t, "", "get", "clusters.postgresql.cnpg.io", "-n", ns, "quiet",
+			"-o", `jsonpath={.status.conditions[?(@.type=="Ready")].status}`)
+		return out == "True", out
+	})
+	primary := strings.TrimSpace(must(t, "", "get", "clusters.postgresql.cnpg.io", "-n", ns, "quiet", "-o", "jsonpath={.status.currentPrimary}"))
+	seg := psqlOn(t, primary, "create table t(x int); insert into t values (1); select pg_walfile_name(pg_current_wal_insert_lsn())")
+	psqlOn(t, primary, "select pg_switch_wal()")
+	eventually(t, 5*time.Minute, "quiet WAL archived", func() (bool, string) {
+		last := psqlOn(t, primary, "select coalesce(last_archived_wal, '') from pg_stat_archiver")
+		return last >= seg && len(last) == len(seg), last
+	})
+	// What leaves the end of a standby backup inside an open segment on an
+	// idle primary: a running-xacts record, which PostgreSQL marks unimportant,
+	// so archive_timeout never switches the segment. The primary logs these on
+	// its own; pg_log_standby_snapshot() (PostgreSQL 16+) writes one now.
+	lsn := psqlOn(t, primary, "select pg_log_standby_snapshot()")
+	eventually(t, 2*time.Minute, "standby replayed the snapshot record", func() (bool, string) {
+		out := psqlOn(t, primary, fmt.Sprintf("select coalesce(bool_and(replay_lsn >= '%s'), false) from pg_stat_replication", lsn))
+		return out == "t", out
+	})
+
+	apply(t, `apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: quiet-standby
+spec:
+  cluster:
+    name: quiet
+  method: plugin
+  target: prefer-standby
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+`)
+	eventually(t, 10*time.Minute, "standby backup completed", func() (bool, string) {
+		out, _ := kubectl(t, "", "get", "backups.postgresql.cnpg.io", "-n", ns, "quiet-standby", "-o", "jsonpath={.status.phase}")
+		if out == "failed" {
+			t.Fatalf("standby backup failed")
+		}
+		return out == "completed", out
+	})
+	endWal := strings.TrimSpace(must(t, "", "get", "backups.postgresql.cnpg.io", "-n", ns, "quiet-standby", "-o", "jsonpath={.status.endWal}"))
+	endLSN := strings.TrimSpace(must(t, "", "get", "backups.postgresql.cnpg.io", "-n", ns, "quiet-standby", "-o", "jsonpath={.status.endLSN}"))
+	if off := psqlOn(t, primary, fmt.Sprintf("select file_offset from pg_walfile_name_offset('%s')", endLSN)); off == "0" {
+		t.Fatalf("backup ends at %s, on a segment boundary: it does not need %s", endLSN, endWal)
+	}
+	from := strings.TrimSpace(must(t, "", "get", "backups.postgresql.cnpg.io", "-n", ns, "quiet-standby", "-o", "jsonpath={.status.instanceID.podName}"))
+	last := psqlOn(t, primary, "select coalesce(last_archived_wal, '') from pg_stat_archiver")
+	t.Logf("backup taken on %s (primary %s), endLSN=%s endWal=%s, primary last_archived_wal=%s", from, primary, endLSN, endWal, last)
+	if from == primary {
+		t.Fatalf("backup ran on the primary, so this does not reproduce #652")
+	}
+	if last >= endWal {
+		t.Fatalf("endWal %s is already archived; #652 did not reproduce", endWal)
+	}
+
+	// Until the segment holding endLSN is archived, every recovery attempt
+	// fails; CloudNativePG retries the recovery job. Record the error the
+	// failed attempts log, and expect the run to miss a 3m recovery objective.
+	apply(t, restoreCheck("quiet", "ro-store", "quiet", `
+  objectives:
+    recoveryTime: 3m
+  timeout: 15m`))
+	sawError := ""
+	eventually(t, 20*time.Minute, "first quiet run", func() (bool, string) {
+		if sawError == "" {
+			pods, _ := kubectl(t, "", "get", "pods", "-n", ns, "-o",
+				`jsonpath={range .items[*]}{.metadata.name}{"
+"}{end}`)
+			for _, p := range strings.Fields(pods) {
+				if !strings.Contains(p, "full-recovery") {
+					continue
+				}
+				cur, _ := kubectl(t, "", "logs", "-n", ns, p, "--all-containers")
+				prev, _ := kubectl(t, "", "logs", "-n", ns, p, "--all-containers", "--previous")
+				if strings.Contains(cur+prev, "WAL ends before end of online backup") {
+					sawError = p
+				}
+			}
+		}
+		out, _ := kubectl(t, "", "get", "restorecheck", "-n", ns, "quiet", "-o", "jsonpath={.status.lastRun.result}")
+		return out != "", out
+	})
+	s := waitLastRun(t, "quiet", time.Minute)
+	if sawError == "" {
+		t.Logf("did not capture a recovery attempt logging \"WAL ends before end of online backup\"")
+	} else {
+		t.Logf("failed recovery attempt %s logged \"WAL ends before end of online backup\"", sawError)
+	}
+	if s.Result != "Failed" || (s.Reason != "ObjectiveMissed" && s.Reason != "RecoveryFailed" && s.Reason != "Timeout") {
+		t.Fatalf("want the completed-but-unrestorable backup to fail, got %+v", s)
+	}
+	archivedAt := psqlOn(t, primary, "select last_archived_wal || ' at ' || last_archived_time from pg_stat_archiver")
+	t.Logf("primary archived %s (backup completed before that)", archivedAt)
+
+	// The workaround from the issue: switch WAL on the primary, then re-run.
+	psqlOn(t, primary, "select pg_switch_wal()")
+	eventually(t, 5*time.Minute, "endWal archived", func() (bool, string) {
+		last := psqlOn(t, primary, "select coalesce(last_archived_wal, '') from pg_stat_archiver")
+		return last >= endWal, last
+	})
+	must(t, "", "annotate", "restorecheck", "-n", ns, "quiet", "--overwrite",
+		"restorecheck.shanurwan.github.io/run-now=after-switch")
+	eventually(t, 20*time.Minute, "re-run to succeed", func() (bool, string) {
+		out, _ := kubectl(t, "", "get", "restorecheck", "-n", ns, "quiet", "-o", "jsonpath={.status.lastRun.result}/{.status.history[1].result}")
+		return out == "Succeeded/Failed", out
+	})
+	again := waitLastRun(t, "quiet", time.Minute)
+	t.Logf("after the WAL switch: recovery %s", again.RecoveryDuration)
 }

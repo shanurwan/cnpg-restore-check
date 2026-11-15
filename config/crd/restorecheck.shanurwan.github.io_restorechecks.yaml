@@ -252,8 +252,9 @@ spec:
                 type: object
               schedule:
                 description: |-
-                  Schedule is a five-field cron expression (UTC). If empty, the check runs
-                  once after creation and then only when triggered with the run-now annotation.
+                  Schedule is a five-field cron expression (UTC). A new check runs once
+                  right away, then on this schedule. If empty, the check runs once after
+                  creation and then only when triggered with the run-now annotation.
                 type: string
               source:
                 description: Source is the backup to restore.

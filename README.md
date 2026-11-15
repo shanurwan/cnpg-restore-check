@@ -33,8 +33,11 @@ Restores fail for reasons that never show up as a failed backup:
   stops at the gap and promotes *without an error*. The restored database looks
   fine and is missing everything after the gap. The e2e suite here reproduces
   this: one deleted segment, a restore that comes up Ready, and data an hour old.
-- The backup needs WAL that was not archived yet, on a quiet database
+- A backup taken on a standby of a quiet database ends in a WAL segment that is
+  not archived yet, so the "completed" backup cannot be restored until the
+  primary switches WAL
   ([plugin-barman-cloud#652](https://github.com/cloudnative-pg/plugin-barman-cloud/issues/652)).
+  The e2e suite reproduces this too.
 - Recovery across a timeline switch after a failover fails
   ([cloudnative-pg#10422](https://github.com/cloudnative-pg/cloudnative-pg/issues/10422)).
 - Settings, credentials, bucket policies or images changed since anyone last restored.
@@ -57,6 +60,11 @@ The only way to know is to restore. This makes that routine and measured.
 5. Fails the run on a failed check, a failed recovery, a timeout, or a missed
    objective, then records the result in status, Events and Prometheus metrics
    and deletes the temporary cluster.
+
+## Try it
+
+The [quickstart](docs/quickstart.md) runs on kind in about 10 minutes and ends
+with breaking a backup on purpose.
 
 ## Install
 
@@ -182,7 +190,7 @@ Alerts (`prometheusRule.enabled=true`), each with a [runbook](docs/runbooks.md):
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `schedule` | none | cron (UTC). Without it, the check runs once. |
+| `schedule` | none | cron (UTC). A new check runs once right away, then on schedule. Without a schedule, it runs once. |
 | `source.objectStoreName`, `source.serverName` | required | where the backup is |
 | `target` | latest | `backupID`, `targetTime` or `targetImmediate` |
 | `cluster` | 1 instance, 10Gi | `imageName`, `storageSize`, `storageClass`, `resources`, `parameters`, `nodeSelector` |
@@ -206,12 +214,16 @@ Failure reasons in `status.lastRun.reason`: `RecoveryFailed`, `Timeout`,
   - a healthy backup passes amcheck, an assertion and freshness, and its metrics are exported;
   - after deleting one archived WAL segment, the restore still comes up Ready
     but the run fails with `ObjectiveMissed` and a data age of about an hour;
+  - a standby backup of a quiet database (plugin-barman-cloud#652) misses a 3m
+    recovery objective while its last WAL segment is unarchived, and passes in
+    under a minute after a WAL switch on the primary;
   - a wrong server name fails with `RecoveryFailed`;
   - an ObjectStore that the source writes to is refused before anything is created.
 
   Last local run, on k3s v1.35 with CloudNativePG 1.30.1 and plugin-barman-cloud
-  v0.16.0: all four pass. The healthy restore took 56 s with data 10 s old; the WAL
-  gap restore took 55 s with data 1h0m11s old. CI runs the same suite on kind.
+  v0.16.0: all pass. The healthy restore took 56 s with data 10 s old; the WAL
+  gap restore took 55 s with data 1h0m11s old; the quiet standby backup took
+  6m55s to restore, against 54 s after the WAL switch. CI runs the same suite on kind.
 
 The design, including the safety model and alternatives, is in
 [docs/design.md](docs/design.md).

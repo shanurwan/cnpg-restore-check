@@ -11,8 +11,9 @@ const RunNowAnnotation = "restorecheck.shanurwan.github.io/run-now"
 
 // RestoreCheckSpec defines how backups are restored and verified.
 type RestoreCheckSpec struct {
-	// Schedule is a five-field cron expression (UTC). If empty, the check runs
-	// once after creation and then only when triggered with the run-now annotation.
+	// Schedule is a five-field cron expression (UTC). A new check runs once
+	// right away, then on this schedule. If empty, the check runs once after
+	// creation and then only when triggered with the run-now annotation.
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 

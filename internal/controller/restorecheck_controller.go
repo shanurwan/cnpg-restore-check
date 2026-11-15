@@ -130,14 +130,15 @@ func isDue(rc *v1alpha1.RestoreCheck, now time.Time) (due bool, next *metav1.Tim
 	if err != nil {
 		return false, nil, "", fmt.Errorf("spec.schedule: %w", err)
 	}
-	base := rc.CreationTimestamp.Time
-	if lr := rc.Status.LastRun; lr != nil {
-		base = lr.StartTime.Time
-	}
-	n := metav1.NewTime(sched.Next(base.UTC()))
 	if rc.Spec.Suspend {
 		return false, nil, "", nil
 	}
+	// A new check runs once right away, so it proves itself without waiting
+	// for its first slot; after that it follows the schedule.
+	if rc.Status.LastRun == nil {
+		return true, nil, "", nil
+	}
+	n := metav1.NewTime(sched.Next(rc.Status.LastRun.StartTime.UTC()))
 	return !now.Before(n.Time), &n, "", nil
 }
 

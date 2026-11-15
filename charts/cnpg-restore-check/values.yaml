@@ -39,6 +39,12 @@ serviceAccount:
 
 metrics:
   port: 8080
+  service:
+    # For Prometheus or VictoriaMetrics setups that discover targets by
+    # annotation, for example:
+    #   prometheus.io/scrape: "true"
+    #   prometheus.io/port: "8080"
+    annotations: {}
   serviceMonitor:
     # Requires the Prometheus Operator CRDs.
     enabled: false
