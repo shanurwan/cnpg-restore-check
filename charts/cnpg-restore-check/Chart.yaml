@@ -12,3 +12,46 @@ keywords:
   - postgresql
   - backup
   - disaster-recovery
+maintainers:
+  - name: shanurwan
+    url: https://github.com/shanurwan
+annotations:
+  artifacthub.io/category: database
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/operator: "true"
+  artifacthub.io/operatorCapabilities: Basic Install
+  artifacthub.io/prerelease: "true"
+  artifacthub.io/links: |
+    - name: Source
+      url: https://github.com/shanurwan/cnpg-restore-check
+    - name: Quickstart
+      url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/quickstart.md
+    - name: Design
+      url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/design.md
+    - name: Runbooks
+      url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md
+  artifacthub.io/crds: |
+    - kind: RestoreCheck
+      version: v1alpha1
+      name: restorechecks.restorecheck.shanurwan.github.io
+      displayName: RestoreCheck
+      description: Restores a CloudNativePG backup on a schedule, verifies it, and measures recovery time and data age.
+  artifacthub.io/crdsExamples: |
+    - apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+      kind: RestoreCheck
+      metadata:
+        name: orders
+      spec:
+        schedule: "0 3 * * *"
+        source:
+          objectStoreName: pg-main-readonly
+          serverName: pg-main
+        checks:
+          amcheck: {}
+          freshness:
+            database: app
+            query: "select max(ts) from heartbeat"
+        objectives:
+          recoveryTime: 30m
+          dataAge: 10m
+          successAge: 26h

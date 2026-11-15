@@ -1,0 +1,35 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: restorecheck
+    attributes:
+      label: RestoreCheck
+      description: "`kubectl get restorecheck <name> -o yaml` (remove secrets and bucket names you don't want public)"
+      render: yaml
+  - type: textarea
+    id: logs
+    attributes:
+      label: Controller logs
+      description: "`kubectl -n cnpg-restore-check logs deploy/cnpg-restore-check --tail=200`"
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: cnpg-restore-check, CloudNativePG, plugin-barman-cloud, Kubernetes
+      placeholder: "0.1.0, 1.30.1, 0.16.0, 1.35"
+    validations:
+      required: true
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Object storage
+      options: [AWS S3, S3-compatible (MinIO, RustFS, Ceph, ...), Google Cloud Storage, Azure Blob, Other]

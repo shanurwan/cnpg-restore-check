@@ -237,6 +237,17 @@ make manifests       # regenerate CRD and RBAC after changing api/ or RBAC marke
 make e2e             # needs a cluster; see test/e2e/README.md
 ```
 
+## Contributing
+
+Bug reports from real setups are the most useful contribution: every storage
+provider and cluster layout finds different failures. See
+[CONTRIBUTING.md](CONTRIBUTING.md); commits need a DCO sign-off (`git commit -s`).
+Issues labelled [good first issue](https://github.com/shanurwan/cnpg-restore-check/labels/good%20first%20issue)
+are scoped for a first change. Questions go to
+[Discussions](https://github.com/shanurwan/cnpg-restore-check/discussions).
+
+Using it? Add yourself to [ADOPTERS.md](ADOPTERS.md).
+
 ## License
 
 Apache License 2.0

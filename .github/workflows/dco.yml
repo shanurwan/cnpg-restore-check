@@ -1,0 +1,26 @@
+name: dco
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  dco:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Every commit has a Signed-off-by matching its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          fail=0
+          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            author="$(git log -1 --format='%an <%ae>' "$c")"
+            if ! git log -1 --format=%B "$c" | grep -qiF "Signed-off-by: $author"; then
+              echo "::error::$(git log -1 --format='%h %s' "$c") has no 'Signed-off-by: $author'"
+              fail=1
+            fi
+          done
+          [ $fail -eq 0 ] || { echo "Sign off with: git rebase --signoff $BASE && git push --force-with-lease"; exit 1; }

@@ -1,0 +1,15 @@
+name: Feature request
+description: A check, setting or integration you need
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to catch or do?
+      description: The failure or workflow, in your setup. "We use X and want to know Y" is ideal.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How would you like it to work?

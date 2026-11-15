@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/shanurwan/cnpg-restore-check/discussions
+    about: Ask how to set it up, or discuss an idea before opening an issue.
