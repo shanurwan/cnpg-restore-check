@@ -1,0 +1,40 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Generated files are up to date
+        run: |
+          make generate manifests
+          git diff --exit-code
+      - run: go vet ./... && go vet -tags e2e ./test/e2e/
+      - run: make test
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
+  alerts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: promtool
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w --entrypoint sh prom/prometheus:v3.7.3 \
+            -c "promtool check rules charts/cnpg-restore-check/files/alerts.yaml && promtool test rules test/alerts/alerts_test.yaml"
+  chart:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - run: make lint-chart install-yaml

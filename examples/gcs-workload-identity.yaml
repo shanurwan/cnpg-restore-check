@@ -1,0 +1,43 @@
+# Read-only restore checks on GKE with Workload Identity Federation for GKE.
+#
+# The restored cluster's service account name changes every run
+# (<restorecheck>-<timestamp>), so grant read access to every Kubernetes
+# service account in the namespace instead of one by name:
+#
+#   gcloud storage buckets add-iam-policy-binding gs://acme-pg-backups \
+#     --role=roles/storage.objectViewer \
+#     --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/PROJECT_ID.svc.id.goog/namespace/payments-restore-checks"
+#
+# Use a namespace dedicated to restore checks, so the grant covers nothing else.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: pg-main-readonly
+  namespace: payments-restore-checks
+spec:
+  configuration:
+    destinationPath: gs://acme-pg-backups/
+    googleCredentials:
+      gkeEnvironment: true
+---
+apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+kind: RestoreCheck
+metadata:
+  name: orders
+  namespace: payments-restore-checks
+spec:
+  schedule: "0 3 * * *"
+  source:
+    objectStoreName: pg-main-readonly
+    serverName: pg-main
+  cluster:
+    storageSize: 50Gi
+  checks:
+    amcheck: {}
+    freshness:
+      database: app
+      query: "select max(ts) from heartbeat"
+  objectives:
+    recoveryTime: 30m
+    dataAge: 10m
+    successAge: 26h

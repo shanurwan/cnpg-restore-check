@@ -1,0 +1,67 @@
+groups:
+  - name: cnpg-restore-check
+    rules:
+      - alert: CNPGRestoreCheckFailed
+        expr: cnpg_restore_check_last_run_success == 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Restore check {{ $labels.namespace }}/{{ $labels.name }} failed"
+          description: >-
+            The last restore of this backup failed or did not meet its objectives.
+            Until a run succeeds, assume this backup may not be restorable.
+            See `kubectl describe restorecheck -n {{ $labels.namespace }} {{ $labels.name }}`.
+          runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckfailed
+
+      - alert: CNPGRestoreCheckStale
+        expr: |
+          time() - cnpg_restore_check_last_success_timestamp_seconds
+            > on (namespace, name) cnpg_restore_check_objective_success_age_seconds
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No successful restore check for {{ $labels.namespace }}/{{ $labels.name }} recently"
+          description: >-
+            The last successful restore finished {{ $value | humanizeDuration }} ago,
+            longer than spec.objectives.successAge.
+          runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckstale
+
+      - alert: CNPGRestoreCheckRecoveryTimeAboveObjective
+        expr: |
+          cnpg_restore_check_recovery_duration_seconds
+            > on (namespace, name) cnpg_restore_check_objective_recovery_time_seconds
+        labels:
+          severity: warning
+        annotations:
+          summary: "Restore of {{ $labels.namespace }}/{{ $labels.name }} is slower than its RTO"
+          description: >-
+            The last measured recovery took {{ $value | humanizeDuration }}, more than
+            spec.objectives.recoveryTime. A real restore would miss the recovery time objective.
+          runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckrecoverytimeaboveobjective
+
+      - alert: CNPGRestoreCheckDataAgeAboveObjective
+        expr: |
+          cnpg_restore_check_data_age_seconds
+            > on (namespace, name) cnpg_restore_check_objective_data_age_seconds
+        labels:
+          severity: critical
+        annotations:
+          summary: "Restored data for {{ $labels.namespace }}/{{ $labels.name }} is older than its RPO"
+          description: >-
+            The newest restored data was {{ $value | humanizeDuration }} old when the run
+            started, more than spec.objectives.dataAge. A real restore would lose that much data.
+          runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckdataageaboveobjective
+
+      - alert: CNPGRestoreCheckRunStuck
+        expr: |
+          cnpg_restore_check_run_in_progress == 1
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Restore check {{ $labels.namespace }}/{{ $labels.name }} has been running for over 6 hours"
+          description: >-
+            A run normally ends at spec.timeout (default 2h). A run that is still in
+            progress after 6 hours suggests the controller is not reconciling it.
+          runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckrunstuck

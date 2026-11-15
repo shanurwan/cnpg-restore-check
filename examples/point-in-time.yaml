@@ -1,0 +1,21 @@
+# Restore to a point in time instead of the latest point, for example to
+# check that a week-old recovery point is still restorable before a
+# retention change.
+apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+kind: RestoreCheck
+metadata:
+  name: orders-pitr
+  namespace: payments
+spec:
+  source:
+    objectStoreName: pg-main-readonly
+    serverName: pg-main
+  target:
+    targetTime: "2026-11-08T03:00:00Z"
+  checks:
+    amcheck: {}
+    sql:
+      - name: orders-before-target
+        database: app
+        query: "select max(created_at) <= '2026-11-08T03:00:00Z' from orders"
+  timeout: 3h

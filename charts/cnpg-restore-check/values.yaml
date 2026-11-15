@@ -1,0 +1,51 @@
+image:
+  repository: ghcr.io/shanurwan/cnpg-restore-check
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Maximum restore runs in progress at once across all RestoreChecks. Each run
+# is a full PostgreSQL instance, so this bounds the cost of overlapping schedules.
+maxConcurrentRuns: 1
+
+# Namespaces to watch. Empty watches all namespaces.
+watchNamespaces: []
+
+leaderElection:
+  enabled: false
+
+replicaCount: 1
+
+logLevel: info
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+metrics:
+  port: 8080
+  serviceMonitor:
+    # Requires the Prometheus Operator CRDs.
+    enabled: false
+    interval: 30s
+    labels: {}
+
+prometheusRule:
+  # Requires the Prometheus Operator CRDs.
+  enabled: false
+  labels: {}

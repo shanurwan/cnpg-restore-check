@@ -1,0 +1,59 @@
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - barmancloud.cnpg.io
+  resources:
+  - objectstores
+  verbs:
+  - get
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - list
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - clusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
+  - restorecheck.shanurwan.github.io
+  resources:
+  - restorechecks
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - restorecheck.shanurwan.github.io
+  resources:
+  - restorechecks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - restorecheck.shanurwan.github.io
+  resources:
+  - restorechecks/status
+  verbs:
+  - get
+  - patch
+  - update

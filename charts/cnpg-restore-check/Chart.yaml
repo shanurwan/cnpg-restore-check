@@ -1,0 +1,14 @@
+apiVersion: v2
+name: cnpg-restore-check
+description: Scheduled restore checks for CloudNativePG backups made with plugin-barman-cloud
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/shanurwan/cnpg-restore-check
+sources:
+  - https://github.com/shanurwan/cnpg-restore-check
+keywords:
+  - cloudnative-pg
+  - postgresql
+  - backup
+  - disaster-recovery

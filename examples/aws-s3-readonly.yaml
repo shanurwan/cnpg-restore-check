@@ -1,0 +1,40 @@
+# Read-only restore checks on EKS with IRSA.
+#
+# The restored cluster's pods run as a service account that CloudNativePG names
+# after the temporary cluster: <restorecheck>-<timestamp>, for example
+# orders-20261115-030000. Trust it with a wildcard in the role's trust policy:
+#
+#   "Condition": {"StringLike": {
+#     "oidc.eks.<region>.amazonaws.com/id/<id>:sub": "system:serviceaccount:payments:orders-*"}}
+#
+# and give the role only s3:GetObject and s3:ListBucket on the backup bucket.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: pg-main-readonly
+  namespace: payments
+spec:
+  configuration:
+    destinationPath: s3://acme-pg-backups/
+    s3Credentials:
+      inheritFromIAMRole: true
+---
+apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+kind: RestoreCheck
+metadata:
+  name: orders
+  namespace: payments
+spec:
+  schedule: "0 3 * * *"
+  source:
+    objectStoreName: pg-main-readonly
+    serverName: pg-main
+  cluster:
+    serviceAccountAnnotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/pg-backups-readonly
+  checks:
+    amcheck:
+      heap: true
+  objectives:
+    recoveryTime: 30m
+    successAge: 26h

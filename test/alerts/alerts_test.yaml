@@ -1,0 +1,106 @@
+rule_files:
+  - ../../charts/cnpg-restore-check/files/alerts.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - name: failed run fires, successful run does not
+    interval: 1m
+    input_series:
+      - series: 'cnpg_restore_check_last_run_success{namespace="drills",name="bad"}'
+        values: '0x10'
+      - series: 'cnpg_restore_check_last_run_success{namespace="drills",name="good"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: CNPGRestoreCheckFailed
+        exp_alerts:
+          - exp_labels: {severity: critical, namespace: drills, name: bad}
+            exp_annotations:
+              summary: "Restore check drills/bad failed"
+              description: "The last restore of this backup failed or did not meet its objectives. Until a run succeeds, assume this backup may not be restorable. See `kubectl describe restorecheck -n drills bad`."
+              runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckfailed
+
+  - name: stale fires only past the success-age objective
+    interval: 1m
+    input_series:
+      # Last success at t=0; objective 1h.
+      - series: 'cnpg_restore_check_last_success_timestamp_seconds{namespace="drills",name="nightly"}'
+        values: '0x120'
+      - series: 'cnpg_restore_check_objective_success_age_seconds{namespace="drills",name="nightly"}'
+        values: '3600x120'
+      # No objective: never stale.
+      - series: 'cnpg_restore_check_last_success_timestamp_seconds{namespace="drills",name="noobjective"}'
+        values: '0x120'
+    alert_rule_test:
+      - eval_time: 55m
+        alertname: CNPGRestoreCheckStale
+        exp_alerts: []
+      - eval_time: 65m
+        alertname: CNPGRestoreCheckStale
+        exp_alerts: []
+      - eval_time: 75m
+        alertname: CNPGRestoreCheckStale
+        exp_alerts:
+          - exp_labels: {severity: warning, namespace: drills, name: nightly}
+            exp_annotations:
+              summary: "No successful restore check for drills/nightly recently"
+              description: "The last successful restore finished 1h 15m 0s ago, longer than spec.objectives.successAge."
+              runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckstale
+
+  - name: recovery time and data age objectives
+    interval: 1m
+    input_series:
+      - series: 'cnpg_restore_check_recovery_duration_seconds{namespace="drills",name="slow"}'
+        values: '2400x5'
+      - series: 'cnpg_restore_check_objective_recovery_time_seconds{namespace="drills",name="slow"}'
+        values: '1800x5'
+      - series: 'cnpg_restore_check_recovery_duration_seconds{namespace="drills",name="fast"}'
+        values: '600x5'
+      - series: 'cnpg_restore_check_objective_recovery_time_seconds{namespace="drills",name="fast"}'
+        values: '1800x5'
+      - series: 'cnpg_restore_check_data_age_seconds{namespace="drills",name="slow"}'
+        values: '2820x5'
+      - series: 'cnpg_restore_check_objective_data_age_seconds{namespace="drills",name="slow"}'
+        values: '300x5'
+      - series: 'cnpg_restore_check_data_age_seconds{namespace="drills",name="fast"}'
+        values: '45x5'
+      - series: 'cnpg_restore_check_objective_data_age_seconds{namespace="drills",name="fast"}'
+        values: '300x5'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: CNPGRestoreCheckRecoveryTimeAboveObjective
+        exp_alerts:
+          - exp_labels: {severity: warning, namespace: drills, name: slow}
+            exp_annotations:
+              summary: "Restore of drills/slow is slower than its RTO"
+              description: "The last measured recovery took 40m 0s, more than spec.objectives.recoveryTime. A real restore would miss the recovery time objective."
+              runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckrecoverytimeaboveobjective
+      - eval_time: 1m
+        alertname: CNPGRestoreCheckDataAgeAboveObjective
+        exp_alerts:
+          - exp_labels: {severity: critical, namespace: drills, name: slow}
+            exp_annotations:
+              summary: "Restored data for drills/slow is older than its RPO"
+              description: "The newest restored data was 47m 0s old when the run started, more than spec.objectives.dataAge. A real restore would lose that much data."
+              runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckdataageaboveobjective
+
+  - name: stuck run
+    interval: 1m
+    input_series:
+      - series: 'cnpg_restore_check_run_in_progress{namespace="drills",name="nightly"}'
+        values: '1x400'
+      - series: 'cnpg_restore_check_run_in_progress{namespace="drills",name="idle"}'
+        values: '0x400'
+    alert_rule_test:
+      - eval_time: 5h
+        alertname: CNPGRestoreCheckRunStuck
+        exp_alerts: []
+      - eval_time: 6h10m
+        alertname: CNPGRestoreCheckRunStuck
+        exp_alerts:
+          - exp_labels: {severity: warning, namespace: drills, name: nightly}
+            exp_annotations:
+              summary: "Restore check drills/nightly has been running for over 6 hours"
+              description: "A run normally ends at spec.timeout (default 2h). A run that is still in progress after 6 hours suggests the controller is not reconciling it."
+              runbook_url: https://github.com/shanurwan/cnpg-restore-check/blob/main/docs/runbooks.md#cnpgrestorecheckrunstuck

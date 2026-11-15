@@ -1,0 +1,514 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: restorechecks.restorecheck.shanurwan.github.io
+spec:
+  group: restorecheck.shanurwan.github.io
+  names:
+    kind: RestoreCheck
+    listKind: RestoreCheckList
+    plural: restorechecks
+    shortNames:
+    - rcheck
+    singular: restorecheck
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.schedule
+      name: Schedule
+      type: string
+    - jsonPath: .status.currentRun.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.lastRun.result
+      name: Last result
+      type: string
+    - jsonPath: .status.lastRun.reason
+      name: Reason
+      type: string
+    - jsonPath: .status.lastRun.recoveryDuration
+      name: Recovery
+      type: string
+    - jsonPath: .status.lastRun.dataAge
+      name: Data age
+      type: string
+    - jsonPath: .status.lastSuccessTime
+      name: Last success
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          RestoreCheck periodically restores a CloudNativePG backup into a temporary
+          cluster, verifies it, and records how long recovery took and how old the
+          restored data is.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RestoreCheckSpec defines how backups are restored and verified.
+            properties:
+              checks:
+                description: Checks run against the restored cluster once it is ready.
+                properties:
+                  amcheck:
+                    description: |-
+                      Amcheck verifies B-tree indexes (and, with heap, table pages) in every
+                      database using the amcheck extension.
+                    properties:
+                      heap:
+                        description: |-
+                          Heap also runs verify_heapam on every table, and checks that every heap
+                          tuple has an index entry. Slower; reads every page.
+                        type: boolean
+                    type: object
+                  freshness:
+                    description: |-
+                      Freshness measures how old the newest restored data is. The query must
+                      return one timestamptz (for example, max(ts) from a heartbeat table).
+                      The age is the run start time minus that timestamp.
+                    properties:
+                      database:
+                        default: postgres
+                        type: string
+                      query:
+                        minLength: 1
+                        type: string
+                    required:
+                    - query
+                    type: object
+                  sql:
+                    description: |-
+                      SQL assertions. Each query must return exactly one row with one boolean
+                      column that is true.
+                    items:
+                      description: SQLCheck is a named SQL assertion.
+                      properties:
+                        database:
+                          default: postgres
+                          type: string
+                        name:
+                          minLength: 1
+                          type: string
+                        query:
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      - query
+                      type: object
+                    type: array
+                type: object
+              cluster:
+                description: Cluster configures the temporary cluster the backup is
+                  restored into.
+                properties:
+                  imageName:
+                    description: |-
+                      ImageName is the PostgreSQL image. It must be the same major version
+                      as the source. The operator default is used if empty.
+                    type: string
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      NodeSelector for the restored instance (for example, to run restores
+                      on cheaper nodes).
+                    type: object
+                  parameters:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Parameters are PostgreSQL parameters for the restored instance. Settings
+                      such as max_connections must be at least the source's values, or
+                      recovery stops.
+                    type: object
+                  resources:
+                    description: Resources for the restored instance.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This field depends on the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  serviceAccountAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      ServiceAccountAnnotations are set on the restored cluster's service
+                      account, for cloud identity such as IRSA (eks.amazonaws.com/role-arn) or
+                      GKE Workload Identity (iam.gke.io/gcp-service-account). The service
+                      account is named after the temporary cluster, <restorecheck>-<timestamp>,
+                      so bind cloud roles with a wildcard or at namespace level.
+                    type: object
+                  storageClass:
+                    description: StorageClass for the restored instance's PVC.
+                    type: string
+                  storageSize:
+                    default: 10Gi
+                    description: StorageSize is the PVC size of the restored instance.
+                    type: string
+                type: object
+              historyLimit:
+                default: 10
+                description: HistoryLimit is the number of past runs kept in status.history.
+                format: int32
+                maximum: 100
+                minimum: 0
+                type: integer
+              keepFailedClusters:
+                description: |-
+                  KeepFailedClusters keeps the temporary cluster of a failed run for
+                  debugging instead of deleting it. It is deleted when the next run starts.
+                type: boolean
+              objectives:
+                description: Objectives turn measured recovery time and data age into
+                  pass/fail.
+                properties:
+                  dataAge:
+                    description: |-
+                      DataAge is the maximum age of the newest restored data, as measured by
+                      checks.freshness (RPO).
+                    type: string
+                  recoveryTime:
+                    description: |-
+                      RecoveryTime is the maximum time from creating the cluster to it being
+                      ready (RTO).
+                    type: string
+                  successAge:
+                    description: |-
+                      SuccessAge is how old the last successful run may get before the
+                      RestoreCheckStale alert fires. Exported as a metric; it does not fail runs.
+                    type: string
+                type: object
+              schedule:
+                description: |-
+                  Schedule is a five-field cron expression (UTC). If empty, the check runs
+                  once after creation and then only when triggered with the run-now annotation.
+                type: string
+              source:
+                description: Source is the backup to restore.
+                properties:
+                  allowSharedObjectStore:
+                    description: |-
+                      AllowSharedObjectStore allows an ObjectStore that a Cluster in this
+                      namespace also uses for WAL archiving. Only set this if its credentials
+                      are read-only or you accept the risk.
+                    type: boolean
+                  objectStoreName:
+                    description: |-
+                      ObjectStoreName is a barmancloud.cnpg.io ObjectStore in the same namespace
+                      as this RestoreCheck. Give it read-only credentials: a restore never
+                      needs to write. It must not be an ObjectStore that a Cluster in this
+                      namespace archives WAL to, unless allowSharedObjectStore is set.
+                    minLength: 1
+                    type: string
+                  serverName:
+                    description: |-
+                      ServerName is the server name the source cluster archives under
+                      (usually the source Cluster's name).
+                    minLength: 1
+                    type: string
+                required:
+                - objectStoreName
+                - serverName
+                type: object
+              suspend:
+                description: Suspend stops new scheduled runs. A run in progress is
+                  not interrupted.
+                type: boolean
+              target:
+                description: |-
+                  Target selects the recovery target. The default is the latest
+                  recoverable point (latest base backup plus all archived WAL).
+                properties:
+                  backupID:
+                    description: BackupID restores a specific base backup.
+                    type: string
+                  targetImmediate:
+                    description: |-
+                      TargetImmediate stops recovery as soon as the base backup is consistent,
+                      without replaying further WAL.
+                    type: boolean
+                  targetTime:
+                    description: TargetTime restores to a point in time (RFC 3339).
+                    type: string
+                type: object
+              timeout:
+                default: 2h
+                description: Timeout bounds a whole run, from creating the cluster
+                  to the last check.
+                type: string
+            required:
+            - source
+            type: object
+          status:
+            description: RestoreCheckStatus is the observed state.
+            properties:
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentRun:
+                description: CurrentRun tracks a run in progress.
+                properties:
+                  clusterName:
+                    type: string
+                  clusterUID:
+                    description: |-
+                      ClusterUID is recorded once the cluster is first seen, to tell a cluster
+                      that is not created yet from one that was deleted or replaced.
+                    type: string
+                  phase:
+                    description: RunPhase is the phase of a run in progress.
+                    type: string
+                  readyTime:
+                    format: date-time
+                    type: string
+                  startTime:
+                    format: date-time
+                    type: string
+                required:
+                - clusterName
+                - phase
+                - startTime
+                type: object
+              history:
+                items:
+                  description: RunSummary records a finished run.
+                  properties:
+                    checks:
+                      items:
+                        description: CheckResult is the result of one check.
+                        properties:
+                          message:
+                            type: string
+                          name:
+                            type: string
+                          passed:
+                            type: boolean
+                        required:
+                        - name
+                        - passed
+                        type: object
+                      type: array
+                    clusterName:
+                      type: string
+                    completionTime:
+                      format: date-time
+                      type: string
+                    dataAge:
+                      description: DataAge is the age of the newest restored data
+                        (checks.freshness).
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    recoveryDuration:
+                      description: RecoveryDuration is the time from creating the
+                        cluster to it being ready.
+                      type: string
+                    result:
+                      description: RunResult is the outcome of a run.
+                      enum:
+                      - Succeeded
+                      - Failed
+                      type: string
+                    startTime:
+                      format: date-time
+                      type: string
+                  required:
+                  - clusterName
+                  - completionTime
+                  - result
+                  - startTime
+                  type: object
+                type: array
+              lastManualTrigger:
+                type: string
+              lastRun:
+                description: RunSummary records a finished run.
+                properties:
+                  checks:
+                    items:
+                      description: CheckResult is the result of one check.
+                      properties:
+                        message:
+                          type: string
+                        name:
+                          type: string
+                        passed:
+                          type: boolean
+                      required:
+                      - name
+                      - passed
+                      type: object
+                    type: array
+                  clusterName:
+                    type: string
+                  completionTime:
+                    format: date-time
+                    type: string
+                  dataAge:
+                    description: DataAge is the age of the newest restored data (checks.freshness).
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  recoveryDuration:
+                    description: RecoveryDuration is the time from creating the cluster
+                      to it being ready.
+                    type: string
+                  result:
+                    description: RunResult is the outcome of a run.
+                    enum:
+                    - Succeeded
+                    - Failed
+                    type: string
+                  startTime:
+                    format: date-time
+                    type: string
+                required:
+                - clusterName
+                - completionTime
+                - result
+                - startTime
+                type: object
+              lastSuccessTime:
+                format: date-time
+                type: string
+              nextRunTime:
+                format: date-time
+                type: string
+              observedGeneration:
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

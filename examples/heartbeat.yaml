@@ -1,0 +1,55 @@
+# A heartbeat writer for the freshness check. It inserts one row a minute into
+# the source database, so a restore's newest heartbeat shows how much data a
+# real recovery would bring back.
+#
+# Create the table once on the source:
+#   CREATE TABLE heartbeat (ts timestamptz NOT NULL DEFAULT now());
+#   GRANT INSERT, DELETE ON heartbeat TO app;
+#
+# Then point the RestoreCheck at it:
+#   checks:
+#     freshness:
+#       database: app
+#       query: "select max(ts) from heartbeat"
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-main-heartbeat
+  namespace: payments
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 50
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: heartbeat
+              image: ghcr.io/cloudnative-pg/postgresql:17
+              command:
+                - psql
+                - -v
+                - ON_ERROR_STOP=1
+                - -c
+                - "INSERT INTO heartbeat DEFAULT VALUES; DELETE FROM heartbeat WHERE ts < now() - interval '7 days';"
+              env:
+                # The app user's secret created by CloudNativePG.
+                - name: PGHOST
+                  value: pg-main-rw
+                - name: PGDATABASE
+                  value: app
+                - name: PGUSER
+                  valueFrom: {secretKeyRef: {name: pg-main-app, key: username}}
+                - name: PGPASSWORD
+                  valueFrom: {secretKeyRef: {name: pg-main-app, key: password}}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: {drop: ["ALL"]}
