@@ -461,6 +461,37 @@ func TestStaleStartTouchesNothing(t *testing.T) {
 	}
 }
 
+// A reconcile that finishes a run from a stale copy, after another reconcile
+// already recorded it and deleted the cluster, must not emit an event. Seen on
+// a lab: "RunFailed ClusterLost" right after "RunSucceeded" for the same run.
+func TestStaleFinishEmitsNoEvent(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck())
+	name := e.startRun()
+	e.markReady(name)
+	e.reconcile() // -> Checking, cluster UID recorded
+	stale := e.get()
+	e.reconcile() // runs the checks, records success, deletes the cluster
+
+	rec := e.r.Recorder.(*record.FakeRecorder)
+	for len(rec.Events) > 0 {
+		<-rec.Events
+	}
+
+	res, err := e.r.progress(context.Background(), stale)
+	if err != nil {
+		t.Fatalf("a stale reconcile should requeue quietly, got %v", err)
+	}
+	if res.RequeueAfter == 0 {
+		t.Error("a stale reconcile should look again")
+	}
+	if len(rec.Events) != 0 {
+		t.Fatalf("a stale reconcile emitted %q", <-rec.Events)
+	}
+	if lr := e.get().Status.LastRun; lr == nil || lr.Result != v1alpha1.ResultSucceeded {
+		t.Fatalf("the recorded run must stay a success, got %+v", lr)
+	}
+}
+
 func TestNewScheduledCheckRunsImmediatelyThenFollowsSchedule(t *testing.T) {
 	e := newEnv(t, objectStore("readonly"), restoreCheck(func(rc *v1alpha1.RestoreCheck) {
 		rc.Spec.Schedule = "0 * * * *"

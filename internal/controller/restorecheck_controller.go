@@ -440,10 +440,8 @@ func (r *Reconciler) finish(ctx context.Context, rc *v1alpha1.RestoreCheck, s v1
 	cond := metav1.Condition{Type: conditionLastRun, ObservedGeneration: rc.Generation}
 	if s.Result == v1alpha1.ResultSucceeded {
 		cond.Status, cond.Reason, cond.Message = metav1.ConditionTrue, "Succeeded", "last run succeeded"
-		r.Recorder.Eventf(rc, corev1.EventTypeNormal, "RunSucceeded", "Restore check succeeded%s", describe(s))
 	} else {
 		cond.Status, cond.Reason, cond.Message = metav1.ConditionFalse, s.Reason, s.Message
-		r.Recorder.Eventf(rc, corev1.EventTypeWarning, "RunFailed", "%s: %s", s.Reason, s.Message)
 	}
 	meta.SetStatusCondition(&rc.Status.Conditions, cond)
 
@@ -451,7 +449,20 @@ func (r *Reconciler) finish(ctx context.Context, rc *v1alpha1.RestoreCheck, s v1
 		rc.Status.NextRunTime = next
 	}
 	if err := r.Status().Update(ctx, rc); err != nil {
+		if apierrors.IsConflict(err) {
+			// This reconcile worked from a stale copy: another one already
+			// recorded the run and deleted its cluster. Report nothing and
+			// look again with fresh state.
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, err
+	}
+	// Events go out only once the result is stored, so a stale reconcile that
+	// loses the update cannot report a run that never happened.
+	if s.Result == v1alpha1.ResultSucceeded {
+		r.Recorder.Eventf(rc, corev1.EventTypeNormal, "RunSucceeded", "Restore check succeeded%s", describe(s))
+	} else {
+		r.Recorder.Eventf(rc, corev1.EventTypeWarning, "RunFailed", "%s: %s", s.Reason, s.Message)
 	}
 	metrics.RecordRun(rc, s)
 	log.FromContext(ctx).Info("restore check finished", "result", s.Result, "reason", s.Reason, "message", s.Message)
