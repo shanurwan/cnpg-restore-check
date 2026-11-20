@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,19 @@ type Result struct {
 	Checks []v1alpha1.CheckResult
 	// DataAge is set when a freshness check ran and returned a timestamp.
 	DataAge *time.Duration
+	// Restored says what the run restored. Fields are empty when they could
+	// not be read; that never fails a run.
+	Restored Restored
+}
+
+// Restored identifies what a restore brought back.
+type Restored struct {
+	// BackupID is the barman backup ID from the backup label.
+	BackupID string
+	// Timeline is the timeline recovery replayed WAL on.
+	Timeline int64
+	// EndLSN is where recovery stopped and the restored cluster promoted.
+	EndLSN string
 }
 
 // Passed reports whether every check passed.
@@ -89,6 +103,7 @@ func Run(ctx context.Context, connect Connector, t Target, spec v1alpha1.ChecksS
 	if !add("connect", err) {
 		return res
 	}
+	res.Restored = readRestored(ctx, conn)
 	databases, err := listDatabases(ctx, conn)
 	_ = conn.Close(ctx)
 	if !add("list-databases", err) {
@@ -143,6 +158,73 @@ func connectWithRetry(ctx context.Context, connect Connector, t Target, d time.D
 			wait *= 2
 		}
 	}
+}
+
+// readRestored reads the backup ID, timeline and end of recovery from the
+// restored data directory. At the end of recovery PostgreSQL renames
+// backup_label to backup_label.old and writes a history file for the timeline
+// it promotes to; the last line of that file is the timeline recovery
+// replayed and the LSN where it stopped. Reading files needs superuser, which
+// the temporary cluster grants.
+func readRestored(ctx context.Context, c Conn) Restored {
+	var r Restored
+	var label *string
+	if err := c.QueryRow(ctx, "SELECT pg_read_file('backup_label.old', true)").Scan(&label); err == nil && label != nil {
+		r.BackupID = parseBackupID(*label)
+	}
+	// The current WAL file name starts with the current timeline in hex. It
+	// is right as soon as the cluster promotes, unlike pg_control_checkpoint(),
+	// which lags until the end-of-recovery checkpoint completes.
+	var walFile string
+	if err := c.QueryRow(ctx, "SELECT pg_walfile_name(pg_current_wal_lsn())").Scan(&walFile); err != nil || len(walFile) < 8 {
+		return r
+	}
+	tl, err := strconv.ParseInt(walFile[:8], 16, 64)
+	if err != nil || tl < 2 {
+		return r
+	}
+	var history *string
+	file := fmt.Sprintf("pg_wal/%08X.history", tl)
+	if err := c.QueryRow(ctx, "SELECT pg_read_file($1, true)", file).Scan(&history); err == nil && history != nil {
+		r.Timeline, r.EndLSN = parseHistory(*history)
+	}
+	return r
+}
+
+// parseBackupID returns the backup ID from a backup label. barman-cloud
+// labels its backups "Barman backup cloud <backup ID>"; any other label is
+// returned as is.
+func parseBackupID(label string) string {
+	for _, line := range strings.Split(label, "\n") {
+		v, ok := strings.CutPrefix(strings.TrimSpace(line), "LABEL: ")
+		if !ok {
+			continue
+		}
+		if id, ok := strings.CutPrefix(v, "Barman backup cloud "); ok {
+			return strings.TrimSpace(id)
+		}
+		return strings.TrimSpace(v)
+	}
+	return ""
+}
+
+// parseHistory returns the parent timeline and switch point of the last
+// entry in a timeline history file ("1\t5/6D000000\tno recovery target specified").
+func parseHistory(h string) (int64, string) {
+	var tl int64
+	var lsn string
+	for _, line := range strings.Split(h, "\n") {
+		f := strings.Fields(line)
+		if len(f) < 2 || strings.HasPrefix(f[0], "#") {
+			continue
+		}
+		n, err := strconv.ParseInt(f[0], 10, 64)
+		if err != nil || !strings.Contains(f[1], "/") {
+			continue
+		}
+		tl, lsn = n, f[1]
+	}
+	return tl, lsn
 }
 
 func dbOr(db string) string {

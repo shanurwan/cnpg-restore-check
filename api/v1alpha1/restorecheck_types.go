@@ -228,6 +228,13 @@ const (
 	ReasonClusterLost     = "ClusterLost"
 )
 
+// ConditionRunDeferred is True while a due run waits, with the reason why.
+const ConditionRunDeferred = "RunDeferred"
+
+// ReasonSourceRecovering defers a run while a Cluster recovers from the same
+// ObjectStore.
+const ReasonSourceRecovering = "SourceRecovering"
+
 // CurrentRun tracks a run in progress.
 type CurrentRun struct {
 	ClusterName string      `json:"clusterName"`
@@ -265,6 +272,18 @@ type RunSummary struct {
 	// DataAge is the age of the newest restored data (checks.freshness).
 	// +optional
 	DataAge *metav1.Duration `json:"dataAge,omitempty"`
+	// BackupID is the base backup the run restored, read from the backup
+	// label in the restored data directory.
+	// +optional
+	BackupID string `json:"backupID,omitempty"`
+	// Timeline is the source timeline whose WAL recovery replayed. The
+	// restored cluster then promotes onto a new timeline of its own.
+	// +optional
+	Timeline int64 `json:"timeline,omitempty"`
+	// RecoveryEndLSN is the WAL position where recovery stopped, from the
+	// history file of the timeline the restored cluster promoted to.
+	// +optional
+	RecoveryEndLSN string `json:"recoveryEndLSN,omitempty"`
 	// +optional
 	Checks []CheckResult `json:"checks,omitempty"`
 }
@@ -298,6 +317,8 @@ type RestoreCheckStatus struct {
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.lastRun.reason`
 // +kubebuilder:printcolumn:name="Recovery",type=string,JSONPath=`.status.lastRun.recoveryDuration`
 // +kubebuilder:printcolumn:name="Data age",type=string,JSONPath=`.status.lastRun.dataAge`
+// +kubebuilder:printcolumn:name="Backup",type=string,JSONPath=`.status.lastRun.backupID`,priority=1
+// +kubebuilder:printcolumn:name="End LSN",type=string,JSONPath=`.status.lastRun.recoveryEndLSN`,priority=1
 // +kubebuilder:printcolumn:name="Last success",type=date,JSONPath=`.status.lastSuccessTime`
 
 // RestoreCheck periodically restores a CloudNativePG backup into a temporary

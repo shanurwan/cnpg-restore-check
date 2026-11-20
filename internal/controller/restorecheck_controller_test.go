@@ -523,3 +523,124 @@ func TestSuspendedNewCheckDoesNotRun(t *testing.T) {
 		t.Fatal("a suspended check must not start")
 	}
 }
+
+func (e *env) drainEvents() []string {
+	rec := e.r.Recorder.(*record.FakeRecorder)
+	var out []string
+	for len(rec.Events) > 0 {
+		out = append(out, <-rec.Events)
+	}
+	return out
+}
+
+func TestRunRecordsWhatWasRestored(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck())
+	e.result.Restored = checks.Restored{BackupID: "20261120T010000", Timeline: 1, EndLSN: "5/6D000000"}
+	name := e.startRun()
+	e.markReady(name)
+	e.drainEvents()
+	e.reconcile()
+	e.reconcile()
+	st := e.get().Status
+	for _, s := range []v1alpha1.RunSummary{*st.LastRun, st.History[0]} {
+		if s.BackupID != "20261120T010000" || s.Timeline != 1 || s.RecoveryEndLSN != "5/6D000000" {
+			t.Fatalf("restored backup not recorded: %+v", s)
+		}
+	}
+	ev := strings.Join(e.drainEvents(), "\n")
+	if !strings.Contains(ev, "RunSucceeded") || !strings.Contains(ev, "backup 20261120T010000, timeline 1, to LSN 5/6D000000") {
+		t.Fatalf("event must name the restored backup, got %q", ev)
+	}
+}
+
+func TestFailedRunEventNamesRestoredBackup(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck())
+	e.result = checks.Result{
+		Checks:   []v1alpha1.CheckResult{{Name: "connect", Passed: true}, {Name: "sql/orders", Passed: false, Message: "assertion returned false"}},
+		Restored: checks.Restored{BackupID: "20261117T010000"},
+	}
+	name := e.startRun()
+	e.markReady(name)
+	e.drainEvents()
+	e.reconcile()
+	e.reconcile()
+	ev := strings.Join(e.drainEvents(), "\n")
+	if !strings.Contains(ev, "RunFailed") || !strings.Contains(ev, "(restored backup 20261117T010000)") {
+		t.Fatalf("got %q", ev)
+	}
+}
+
+func recoveryCluster(name, store, primary string) *unstructured.Unstructured {
+	u := cnpg.NewCluster()
+	u.SetNamespace(ns)
+	u.SetName(name)
+	u.Object["spec"] = map[string]any{
+		"bootstrap": map[string]any{"recovery": map[string]any{"source": "origin"}},
+		"externalClusters": []any{map[string]any{"name": "origin", "plugin": map[string]any{
+			"name": cnpg.PluginName, "parameters": map[string]any{"barmanObjectName": store, "serverName": "pg-main"}}}},
+	}
+	if primary != "" {
+		u.Object["status"] = map[string]any{"currentPrimary": primary}
+	}
+	return u
+}
+
+func TestDefersWhileAClusterRecoversFromTheSameStore(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck(), recoveryCluster("pg-incident", "readonly", ""))
+	res := e.reconcile()
+	st := e.get().Status
+	if st.CurrentRun != nil || st.LastRun != nil {
+		t.Fatalf("no run may start during a real recovery: %+v", st)
+	}
+	if _, ok := e.cluster("nightly-20261115-030000"); ok {
+		t.Fatal("no cluster may be created during a real recovery")
+	}
+	if res.RequeueAfter != busyRetry {
+		t.Errorf("requeue = %s, want %s", res.RequeueAfter, busyRetry)
+	}
+	c := meta.FindStatusCondition(st.Conditions, v1alpha1.ConditionRunDeferred)
+	if c == nil || c.Status != metav1.ConditionTrue || c.Reason != v1alpha1.ReasonSourceRecovering ||
+		!strings.Contains(c.Message, "pg-incident") || !strings.Contains(c.Message, `"readonly"`) {
+		t.Fatalf("condition = %+v", c)
+	}
+	if ev := e.drainEvents(); len(ev) != 1 || !strings.Contains(ev[0], "RunDeferred") {
+		t.Fatalf("want one RunDeferred event, got %q", ev)
+	}
+
+	// Still recovering: no new status write or event on each retry.
+	e.now = e.now.Add(time.Minute)
+	e.reconcile()
+	if ev := e.drainEvents(); len(ev) != 0 {
+		t.Fatalf("repeat deferrals must be quiet, got %q", ev)
+	}
+
+	// The recovered cluster has a primary: the run starts and the condition goes.
+	u, _ := e.cluster("pg-incident")
+	u.Object["status"] = map[string]any{"currentPrimary": "pg-incident-1"}
+	if err := e.c.Update(context.Background(), u); err != nil {
+		t.Fatal(err)
+	}
+	e.startRun()
+	if c := meta.FindStatusCondition(e.get().Status.Conditions, v1alpha1.ConditionRunDeferred); c != nil {
+		t.Fatalf("condition must be removed once the run starts: %+v", c)
+	}
+}
+
+func TestRecoveryFromAnotherStoreDoesNotDefer(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck(), recoveryCluster("pg-staging", "staging", ""))
+	e.startRun()
+}
+
+func TestDeferredConditionClearedWhenNoLongerDue(t *testing.T) {
+	e := newEnv(t, objectStore("readonly"), restoreCheck(), recoveryCluster("pg-incident", "readonly", ""))
+	e.reconcile()
+	rc := e.get()
+	rc.Spec.Suspend = true
+	if err := e.c.Update(context.Background(), rc); err != nil {
+		t.Fatal(err)
+	}
+	e.reconcile()
+	if c := meta.FindStatusCondition(e.get().Status.Conditions, v1alpha1.ConditionRunDeferred); c != nil {
+		t.Fatalf("a suspended check is not waiting: %+v", c)
+	}
+}

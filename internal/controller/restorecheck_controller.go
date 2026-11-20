@@ -92,8 +92,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, r.setInvalid(ctx, rc, err)
 	}
 	if !due {
+		changed := meta.RemoveStatusCondition(&rc.Status.Conditions, v1alpha1.ConditionRunDeferred)
 		if next != nil && (rc.Status.NextRunTime == nil || !rc.Status.NextRunTime.Equal(next)) {
 			rc.Status.NextRunTime = next
+			changed = true
+		}
+		if changed {
 			if err := r.Status().Update(ctx, rc); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -102,6 +106,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{RequeueAfter: next.Sub(now)}, nil
 		}
 		return ctrl.Result{}, nil
+	}
+
+	// A real recovery from the same ObjectStore comes first: a check would
+	// compete with it for object store bandwidth during an incident.
+	recovering, err := r.recoveringFrom(ctx, rc)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if len(recovering) > 0 {
+		return r.deferRun(ctx, rc, v1alpha1.ReasonSourceRecovering, fmt.Sprintf(
+			"Cluster(s) %s are recovering from ObjectStore %q; the run starts once they have a primary",
+			strings.Join(recovering, ", "), rc.Spec.Source.ObjectStoreName))
 	}
 
 	if r.MaxConcurrentRuns > 0 {
@@ -140,6 +156,35 @@ func isDue(rc *v1alpha1.RestoreCheck, now time.Time) (due bool, next *metav1.Tim
 	}
 	n := metav1.NewTime(sched.Next(rc.Status.LastRun.StartTime.UTC()))
 	return !now.Before(n.Time), &n, "", nil
+}
+
+// recoveringFrom returns the Clusters in the RestoreCheck's namespace that are
+// bootstrapping by recovery from its ObjectStore.
+func (r *Reconciler) recoveringFrom(ctx context.Context, rc *v1alpha1.RestoreCheck) ([]string, error) {
+	clusters := &unstructured.UnstructuredList{}
+	clusters.SetGroupVersionKind(cnpg.ClusterListGVK)
+	if err := r.List(ctx, clusters, client.InNamespace(rc.Namespace)); err != nil {
+		return nil, err
+	}
+	return cnpg.RecoveringFrom(clusters.Items, rc.Spec.Source.ObjectStoreName), nil
+}
+
+// deferRun records why a due run is not starting and looks again later. The
+// condition and event change only when the reason does, not on every retry.
+func (r *Reconciler) deferRun(ctx context.Context, rc *v1alpha1.RestoreCheck, reason, msg string) (ctrl.Result, error) {
+	c := meta.FindStatusCondition(rc.Status.Conditions, v1alpha1.ConditionRunDeferred)
+	if c == nil || c.Status != metav1.ConditionTrue || c.Reason != reason || c.Message != msg {
+		meta.SetStatusCondition(&rc.Status.Conditions, metav1.Condition{
+			Type: v1alpha1.ConditionRunDeferred, Status: metav1.ConditionTrue,
+			Reason: reason, Message: msg, ObservedGeneration: rc.Generation,
+		})
+		if err := r.Status().Update(ctx, rc); err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Recorder.Event(rc, corev1.EventTypeNormal, "RunDeferred", msg)
+	}
+	log.FromContext(ctx).Info("run due but deferred", "reason", reason, "message", msg)
+	return ctrl.Result{RequeueAfter: busyRetry}, nil
 }
 
 func (r *Reconciler) runsInProgress(ctx context.Context) (int, error) {
@@ -197,6 +242,7 @@ func (r *Reconciler) start(ctx context.Context, rc *v1alpha1.RestoreCheck, now t
 	if manual != "" {
 		rc.Status.LastManualTrigger = manual
 	}
+	meta.RemoveStatusCondition(&rc.Status.Conditions, v1alpha1.ConditionRunDeferred)
 
 	if err := r.validate(ctx, rc); err != nil {
 		t := metav1.NewTime(now)
@@ -328,6 +374,7 @@ func (r *Reconciler) progress(ctx context.Context, rc *v1alpha1.RestoreCheck) (c
 		res := r.RunChecks(cctx, target, rc.Spec.Checks, run.StartTime.Time)
 		s := r.summary(rc, r.Now())
 		s.Checks = res.Checks
+		s.BackupID, s.Timeline, s.RecoveryEndLSN = res.Restored.BackupID, res.Restored.Timeline, res.Restored.EndLSN
 		if res.DataAge != nil {
 			s.DataAge = &metav1.Duration{Duration: res.DataAge.Round(time.Second)}
 		}
@@ -462,7 +509,7 @@ func (r *Reconciler) finish(ctx context.Context, rc *v1alpha1.RestoreCheck, s v1
 	if s.Result == v1alpha1.ResultSucceeded {
 		r.Recorder.Eventf(rc, corev1.EventTypeNormal, "RunSucceeded", "Restore check succeeded%s", describe(s))
 	} else {
-		r.Recorder.Eventf(rc, corev1.EventTypeWarning, "RunFailed", "%s: %s", s.Reason, s.Message)
+		r.Recorder.Eventf(rc, corev1.EventTypeWarning, "RunFailed", "%s: %s%s", s.Reason, s.Message, restored(s))
 	}
 	metrics.RecordRun(rc, s)
 	log.FromContext(ctx).Info("restore check finished", "result", s.Result, "reason", s.Reason, "message", s.Message)
@@ -477,10 +524,34 @@ func describe(s v1alpha1.RunSummary) string {
 	if s.DataAge != nil {
 		parts = append(parts, "data age "+s.DataAge.Duration.String())
 	}
+	parts = append(parts, restoredParts(s)...)
 	if len(parts) == 0 {
 		return ""
 	}
 	return " (" + strings.Join(parts, ", ") + ")"
+}
+
+// restored describes what a failed run restored, if anything.
+func restored(s v1alpha1.RunSummary) string {
+	parts := restoredParts(s)
+	if len(parts) == 0 {
+		return ""
+	}
+	return " (restored " + strings.Join(parts, ", ") + ")"
+}
+
+func restoredParts(s v1alpha1.RunSummary) []string {
+	var parts []string
+	if s.BackupID != "" {
+		parts = append(parts, "backup "+s.BackupID)
+	}
+	if s.Timeline != 0 {
+		parts = append(parts, fmt.Sprintf("timeline %d", s.Timeline))
+	}
+	if s.RecoveryEndLSN != "" {
+		parts = append(parts, "to LSN "+s.RecoveryEndLSN)
+	}
+	return parts
 }
 
 func (r *Reconciler) setInvalid(ctx context.Context, rc *v1alpha1.RestoreCheck, err error) error {

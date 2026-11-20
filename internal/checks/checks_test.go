@@ -54,3 +54,40 @@ func TestRunStopsAfterFailedConnect(t *testing.T) {
 		t.Fatalf("want only a failed connect check, got %+v", res.Checks)
 	}
 }
+
+func TestParseBackupID(t *testing.T) {
+	// backup_label.old from a lab restore of a plugin-barman-cloud standby backup.
+	label := `START WAL LOCATION: 5/C0041F0 (file 00000001000000050000000C)
+CHECKPOINT LOCATION: 5/D000060
+BACKUP METHOD: streamed
+BACKUP FROM: standby
+START TIME: 2026-11-20 01:00:00 UTC
+LABEL: Barman backup cloud 20261120T010000
+START TIMELINE: 1
+`
+	if got := parseBackupID(label); got != "20261120T010000" {
+		t.Fatalf("got %q", got)
+	}
+	if got := parseBackupID("LABEL: manual\n"); got != "manual" {
+		t.Fatalf("other labels are kept as is, got %q", got)
+	}
+	if got := parseBackupID("START TIMELINE: 1\n"); got != "" {
+		t.Fatalf("no label, got %q", got)
+	}
+}
+
+func TestParseHistory(t *testing.T) {
+	tl, lsn := parseHistory("1\t5/6D000000\tno recovery target specified\n")
+	if tl != 1 || lsn != "5/6D000000" {
+		t.Fatalf("got %d %q", tl, lsn)
+	}
+	// A source that already failed over: the last line is the timeline the
+	// restore replayed.
+	tl, lsn = parseHistory("1\t0/3000000\tno recovery target specified\n\n2\t0/5000160\tat restore point \"x\"\n")
+	if tl != 2 || lsn != "0/5000160" {
+		t.Fatalf("got %d %q", tl, lsn)
+	}
+	if tl, lsn := parseHistory("# comment\n"); tl != 0 || lsn != "" {
+		t.Fatalf("got %d %q", tl, lsn)
+	}
+}

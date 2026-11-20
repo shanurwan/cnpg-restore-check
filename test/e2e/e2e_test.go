@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -116,6 +117,9 @@ type runSummary struct {
 	Message          string `json:"message"`
 	RecoveryDuration string `json:"recoveryDuration"`
 	DataAge          string `json:"dataAge"`
+	BackupID         string `json:"backupID"`
+	Timeline         int64  `json:"timeline"`
+	RecoveryEndLSN   string `json:"recoveryEndLSN"`
 	Checks           []struct {
 		Name    string `json:"name"`
 		Passed  bool   `json:"passed"`
@@ -137,7 +141,8 @@ func waitLastRun(t *testing.T, name string, timeout time.Duration) runSummary {
 		}
 		return true, ""
 	})
-	t.Logf("%s: result=%s reason=%s recovery=%s dataAge=%s message=%q", name, s.Result, s.Reason, s.RecoveryDuration, s.DataAge, s.Message)
+	t.Logf("%s: result=%s reason=%s recovery=%s dataAge=%s backup=%s timeline=%d endLSN=%s message=%q",
+		name, s.Result, s.Reason, s.RecoveryDuration, s.DataAge, s.BackupID, s.Timeline, s.RecoveryEndLSN, s.Message)
 	return s
 }
 
@@ -197,6 +202,9 @@ func TestRestoreChecks(t *testing.T) {
 		if s.RecoveryDuration == "" || s.DataAge == "" {
 			t.Fatalf("recovery duration and data age must be measured: %+v", s)
 		}
+		if !backupIDPattern.MatchString(s.BackupID) || s.Timeline < 1 || !strings.Contains(s.RecoveryEndLSN, "/") {
+			t.Fatalf("the restored backup, timeline and end LSN must be recorded: %+v", s)
+		}
 		names := map[string]bool{}
 		for _, c := range s.Checks {
 			names[c.Name] = c.Passed
@@ -250,10 +258,56 @@ func TestRestoreChecks(t *testing.T) {
 		if err != nil || age < 50*time.Minute {
 			t.Fatalf("data age should be about an hour, got %q", s.DataAge)
 		}
+		// The end LSN shows where recovery stopped: at the gap, not after it.
+		if got := lsnSegment(t, s.RecoveryEndLSN); got > seg2[8:] {
+			t.Fatalf("recovery must stop at the missing segment %s, end LSN %s is in %s", seg2, s.RecoveryEndLSN, got)
+		}
 	})
 
 	t.Run("quiet database: standby backup is not restorable until WAL switches (plugin-barman-cloud#652)", func(t *testing.T) {
 		quietStandbyBackup(t)
+	})
+
+	t.Run("defers while a Cluster recovers from the same object store", func(t *testing.T) {
+		// A Cluster recovering a server that does not exist never gets a
+		// primary, so it stays "recovering" until it is deleted.
+		apply(t, `apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: incident
+spec:
+  instances: 1
+  storage:
+    size: 1Gi
+  bootstrap:
+    recovery:
+      source: origin
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: ro-store
+          serverName: no-such-server`)
+		apply(t, restoreCheck("deferred", "ro-store", "src", ""))
+		eventually(t, 2*time.Minute, "RunDeferred condition", func() (bool, string) {
+			out, _ := kubectl(t, "", "get", "restorecheck", "-n", ns, "deferred", "-o",
+				`jsonpath={.status.conditions[?(@.type=="RunDeferred")].reason}/{.status.conditions[?(@.type=="RunDeferred")].message}`)
+			return strings.HasPrefix(out, "SourceRecovering/") && strings.Contains(out, "incident"), out
+		})
+		if c := managedClusters(t, "deferred"); len(c) != 0 {
+			t.Fatalf("no cluster may be created during a real recovery, found %v", c)
+		}
+		must(t, "", "delete", "cluster.postgresql.cnpg.io", "-n", ns, "incident", "--wait=false")
+		s := waitLastRun(t, "deferred", 20*time.Minute)
+		if s.Result != "Succeeded" {
+			t.Fatalf("the run must start and pass once the recovery is gone, got %+v", s)
+		}
+		out := must(t, "", "get", "restorecheck", "-n", ns, "deferred", "-o",
+			`jsonpath={.status.conditions[?(@.type=="RunDeferred")].type}`)
+		if out != "" {
+			t.Fatalf("RunDeferred must be removed once the run starts, got %q", out)
+		}
 	})
 
 	t.Run("unknown server name fails recovery", func(t *testing.T) {
@@ -279,6 +333,19 @@ spec:
     storageSize: 1Gi
 %s
 `, name, store, server, extra)
+}
+
+var backupIDPattern = regexp.MustCompile(`^\d{8}T\d{6}$`)
+
+// lsnSegment returns the last 16 hex digits of the name of the WAL segment
+// (16 MB) holding lsn, comparable with a segment name's [8:].
+func lsnSegment(t *testing.T, lsn string) string {
+	t.Helper()
+	var hi, lo uint64
+	if _, err := fmt.Sscanf(lsn, "%X/%X", &hi, &lo); err != nil {
+		t.Fatalf("bad LSN %q: %v", lsn, err)
+	}
+	return fmt.Sprintf("%08X%08X", hi, lo>>24)
 }
 
 func insertAndSwitch(t *testing.T, ts string) string {
