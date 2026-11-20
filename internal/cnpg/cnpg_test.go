@@ -145,3 +145,47 @@ func TestIsReady(t *testing.T) {
 		t.Fatal("Ready=True is ready")
 	}
 }
+
+func TestRecoveringFrom(t *testing.T) {
+	ours := recoveryCluster("nightly-20261120-010000", "prod", "")
+	ours.SetLabels(map[string]string{LabelManagedBy: ManagedByValue})
+	legacy := recoveryCluster("pg-legacy", "prod", "")
+	legacy.Object["spec"].(map[string]any)["externalClusters"] = []any{
+		map[string]any{"name": "origin", "barmanObjectStore": map[string]any{"destinationPath": "s3://prod"}},
+	}
+	clusters := []unstructured.Unstructured{
+		*recoveryCluster("pg-restoring", "prod", ""),
+		*recoveryCluster("pg-restored", "prod", "pg-restored-1"),
+		*recoveryCluster("pg-elsewhere", "staging", ""),
+		*ours,
+		*legacy,
+		cluster("plain", nil),
+	}
+	got := RecoveringFrom(clusters, "prod")
+	if len(got) != 1 || got[0] != "pg-restoring" {
+		t.Fatalf("recovering = %v, want [pg-restoring]", got)
+	}
+	if got := RecoveringFrom(clusters, "unrelated"); len(got) != 0 {
+		t.Fatalf("a store that is not the recovery source = %v", got)
+	}
+}
+
+// recoveryCluster returns a Cluster bootstrapping by recovery from store,
+// with currentPrimary set when primary is not empty.
+func recoveryCluster(name, store, primary string) *unstructured.Unstructured {
+	u := NewCluster()
+	u.SetName(name)
+	u.Object["spec"] = map[string]any{
+		"bootstrap": map[string]any{"recovery": map[string]any{"source": "origin"}},
+		"externalClusters": []any{
+			map[string]any{"name": "other", "plugin": map[string]any{"name": PluginName,
+				"parameters": map[string]any{"barmanObjectName": "unrelated"}}},
+			map[string]any{"name": "origin", "plugin": map[string]any{"name": PluginName,
+				"parameters": map[string]any{"barmanObjectName": store, "serverName": "pg-main"}}},
+		},
+	}
+	if primary != "" {
+		u.Object["status"] = map[string]any{"currentPrimary": primary}
+	}
+	return u
+}

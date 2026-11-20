@@ -194,3 +194,38 @@ func ObjectStoreWriters(clusters []unstructured.Unstructured, objectStore string
 	}
 	return users
 }
+
+// RecoveringFrom returns the names of clusters (other than those managed by
+// this controller) that are still bootstrapping by recovery from objectStore
+// through plugin-barman-cloud. A cluster counts as recovering until it has a
+// running primary (status.currentPrimary): CloudNativePG sets that only after
+// the recovery job has restored the base backup and replayed WAL.
+func RecoveringFrom(clusters []unstructured.Unstructured, objectStore string) []string {
+	var names []string
+	for _, c := range clusters {
+		if c.GetLabels()[LabelManagedBy] == ManagedByValue {
+			continue
+		}
+		if p, _, _ := unstructured.NestedString(c.Object, "status", "currentPrimary"); p != "" {
+			continue
+		}
+		source, _, _ := unstructured.NestedString(c.Object, "spec", "bootstrap", "recovery", "source")
+		if source == "" {
+			continue
+		}
+		externals, _, _ := unstructured.NestedSlice(c.Object, "spec", "externalClusters")
+		for _, e := range externals {
+			m, ok := e.(map[string]any)
+			if !ok || m["name"] != source {
+				continue
+			}
+			plugin, _ := m["plugin"].(map[string]any)
+			params, _ := plugin["parameters"].(map[string]any)
+			if plugin["name"] == PluginName && params["barmanObjectName"] == objectStore {
+				names = append(names, c.GetName())
+			}
+			break
+		}
+	}
+	return names
+}

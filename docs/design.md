@@ -77,6 +77,16 @@ backup, including archiving lag and gaps. The e2e suite deletes one archived WAL
 segment and shows that the restore still comes up Ready while the freshness check
 reports data about an hour old.
 
+Each run also records what it restored, read from the restored data directory
+rather than from Kubernetes objects: the backup ID from `backup_label.old`
+(PostgreSQL renames the backup label when recovery ends), and the timeline and
+LSN where recovery stopped from the history file of the timeline the restored
+cluster promoted to. This needs no extra access to the bucket or the source,
+works whether the plugin picked the latest backup or `target.backupID` named
+one, and ties a result to a specific backup. In the WAL gap test, the end LSN is
+at the deleted segment. Missing files leave the fields empty and never fail a
+run.
+
 ### Why one controller and a CRD, not a CronJob
 
 - Each run creates and waits on Kubernetes objects (Cluster, Jobs, Secrets).
@@ -108,6 +118,12 @@ The main risk of a restore test is writing into the backups it is testing.
 - **Bounded cost.** One instance per run, a run timeout (default 2h),
   `--max-concurrent-runs` across all checks (default 1), and deletion of the
   cluster at the end of the run.
+- **Real recoveries first.** A due run is deferred while a Cluster in the
+  namespace (not one of ours) bootstraps by recovery from the same ObjectStore,
+  that is, until it has `status.currentPrimary`: CloudNativePG sets that only
+  after the recovery job has restored the base backup and replayed WAL. The
+  RestoreCheck gets a `RunDeferred` condition naming the Cluster, and the run
+  starts on the first retry after the recovery finishes or goes away.
 - **Credentials of restored data.** A restored cluster contains production data.
   Run checks in a namespace with the same access controls as the source, and
   apply NetworkPolicies there that allow only the controller to reach port 5432.
@@ -121,6 +137,7 @@ The main risk of a restore test is writing into the backups it is testing.
 | Recovery job fails | Detected from the Job's `Failed` condition; run fails with `RecoveryFailed` and the command to read the job's logs. |
 | Recovery hangs (missing WAL that blocks consistency, image pull) | Run fails with `Timeout` and the cluster phase. |
 | Several runs due at once | Started one by one up to `--max-concurrent-runs`; others wait. |
+| A real recovery from the same ObjectStore is running | The run waits with `RunDeferred` (`SourceRecovering`), retrying every minute. |
 | Controller down for days | On return, one run starts for missed slots, not one per slot. `CNPGRestoreCheckStale` fires when `successAge` passes. |
 | Run stuck in progress | `CNPGRestoreCheckRunStuck` fires after 6h. |
 
