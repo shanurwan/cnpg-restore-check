@@ -34,7 +34,11 @@ lint-chart:
 .PHONY: install-yaml
 install-yaml: ## Render a plain install manifest (CRD, RBAC, Deployment) to dist/install.yaml.
 	mkdir -p dist
-	cat $(CHART)/crds/*.yaml > dist/install.yaml
+	echo 'apiVersion: v1' > dist/install.yaml
+	echo 'kind: Namespace' >> dist/install.yaml
+	echo 'metadata:' >> dist/install.yaml
+	echo '  name: cnpg-restore-check' >> dist/install.yaml
+	cat $(CHART)/crds/*.yaml >> dist/install.yaml
 	echo '---' >> dist/install.yaml
 	$(HELM) template cnpg-restore-check $(CHART) --namespace cnpg-restore-check >> dist/install.yaml
 
