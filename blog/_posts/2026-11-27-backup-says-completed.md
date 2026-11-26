@@ -1,7 +1,9 @@
 ---
 layout: post
 title: '6 Postgres backups said "completed". 2 couldn''t restore, 4 restored with bad data'
-date: 2026-12-02
+date: 2026-11-27
+# Keep the original address: it is linked from a CV and other pages.
+permalink: /2026/12/02/backup-says-completed.html
 tags: [postgresql, kubernetes, cloudnativepg, backups]
 ---
 
