@@ -172,3 +172,8 @@ blockquote {
   font-size: 0.9rem;
   color: $grey-color;
 }
+
+// Key-value tables written with an empty header row: hide that row.
+.post-content thead:not(:has(th:not(:empty))) { display: none; }
+// No zebra stripes from the theme.
+.post-content table tr:nth-child(even) { background-color: transparent; }
