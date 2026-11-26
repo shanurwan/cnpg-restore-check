@@ -1,15 +1,14 @@
 ---
 layout: post
-title: "My Postgres backup said completed. I broke it six ways to see what that was worth."
+title: '6 Postgres backups said "completed". 2 couldn''t restore, 4 restored with bad data'
 date: 2026-12-02
 tags: [postgresql, kubernetes, cloudnativepg, backups]
-# Not on the site until this is removed or set to true.
-published: false
 ---
 
-A CloudNativePG `Backup` that reaches `completed` tells you one thing: the base backup was uploaded. It does not tell you that you can restore from it.
 
-I knew that in the abstract. I wanted numbers. So I broke backups on purpose, six different ways, and asked three things whether I could still restore:
+CloudNativePG `Backup completed` tells the base backup was uploaded. Whether its restorable we deploy a chronjob to automate restore test on schedule so we can get alerted upon failure. An independent due diligence caught a fail restore our chronjob miss alerting us so i build a kubernetes controller for cnpg restore check on schedule that test restore and verifies the data.
+
+I conduct a benchmark study on the restore reliability by breaking backups on purpose, six different ways, and asked three things whether I could still restore:
 
 1. **CloudNativePG's own status**: the `Backup` phase and the cluster's `ContinuousArchiving` condition.
 2. **A plain restore CronJob**: create a recovery cluster from the latest backup, wait for it to become Ready, delete it. This is the restore test many teams write first.
@@ -27,9 +26,7 @@ Each scenario ran three times on a fresh namespace, a fresh bucket prefix and a 
 | Plain restore CronJob | 2 |
 | restore-check | 6 |
 
-In five of the six cases CloudNativePG reported every backup `completed` and archiving healthy. That is not a bug in CloudNativePG. Its status describes the upload, and the upload was fine. What happened to the files afterwards, or what was in them, is outside what it can see.
-
-The plain CronJob is the more interesting column, because it is what people build when they already know status is not enough.
+In five of the six cases CloudNativePG reported every backup `completed` and archiving healthy. That is not a bug in CloudNativePG. Its status describes the upload, and the upload was fine. What happened to the files afterwards, or what was in them, is outside what it can see. The plain CronJob is the more interesting column, because it is what people build when they already know status is not enough.
 
 ## What "it restored" misses
 
