@@ -13,3 +13,41 @@ code, pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.85em;
 }
+
+// Use the full window width instead of a narrow centred column.
+.wrapper {
+  max-width: none;
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+@media screen and (max-width: 600px) {
+  .wrapper {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+// Centre the site header and the post title block.
+.site-header .wrapper {
+  text-align: center;
+}
+
+.site-title,
+.site-title:visited {
+  float: none;
+  display: inline-block;
+}
+
+.site-nav {
+  float: none;
+  display: block;
+}
+
+.post-header {
+  text-align: center;
+}
+
+table {
+  width: 100%;
+}
