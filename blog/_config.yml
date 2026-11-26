@@ -1,0 +1,18 @@
+# Blog for cnpg-restore-check's author, built by .github/workflows/blog.yml and served on GitHub Pages.
+title: Wan Nur Shafiqah
+description: Notes on running Postgres on Kubernetes, mostly backups and restores.
+author: Wan Nur Shafiqah
+url: https://shanurwan.github.io
+baseurl: /cnpg-restore-check
+github_username: shanurwan
+theme: minima
+plugins:
+  - jekyll-feed
+markdown: kramdown
+kramdown:
+  input: GFM
+# Full feed at /feed.xml. Postgres-only feed (for Planet PostgreSQL) at /feed/by_tag/postgresql.xml.
+feed:
+  tags:
+    only:
+      - postgresql
