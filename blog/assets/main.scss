@@ -177,3 +177,7 @@ blockquote {
 .post-content thead:not(:has(th:not(:empty))) { display: none; }
 // No zebra stripes from the theme.
 .post-content table tr:nth-child(even) { background-color: transparent; }
+
+// Centre section headings.
+.post-content h2,
+.post-content h3 { text-align: center; }
