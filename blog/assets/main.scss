@@ -181,3 +181,12 @@ blockquote {
 // Centre section headings.
 .post-content h2,
 .post-content h3 { text-align: center; }
+
+// Centre the post: paragraphs, headings, images and tables. Lists and code stay left-aligned.
+.post-content {
+  text-align: center;
+  ul, ol, pre, .highlight { text-align: left; }
+  img { margin-left: auto; margin-right: auto; }
+  table { display: table; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; overflow-x: visible; }
+  th, td { text-align: center; }
+}
