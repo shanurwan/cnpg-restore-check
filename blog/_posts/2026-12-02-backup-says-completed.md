@@ -6,7 +6,7 @@ tags: [postgresql, kubernetes, cloudnativepg, backups]
 ---
 
 
-When a CloudNativePG `Backup` says `completed`, it tells you the base backup was uploaded. It does not tell you whether you can restore from it. To find out, we deployed a CronJob that ran a restore test on a schedule and alerted us when it failed. Then an independent due diligence review caught a failed restore that our CronJob had not alerted us about. So I built a Kubernetes controller for CloudNativePG that runs restore tests on a schedule and verifies the restored data.
+When a CloudNativePG `Backup` says `completed`, it tells you the base backup was uploaded. It does not tell you whether you can restore from it. To find out, we deployed a CronJob that ran a restore test on a schedule and alerted us when it failed. Then a manual due diligence check we ran ourselves caught a failed restore that our CronJob had not alerted us about. So I built a Kubernetes controller for CloudNativePG that runs restore tests on a schedule and verifies the restored data.
 
 Then I benchmarked restore reliability. I broke backups on purpose, six different ways, and asked three checks whether each backup could still be restored:
 
