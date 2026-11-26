@@ -190,3 +190,5 @@ blockquote {
   table { display: table; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; overflow-x: visible; }
   th, td { text-align: center; }
 }
+.post-content table th,
+.post-content table td { text-align: center; }

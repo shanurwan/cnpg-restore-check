@@ -15,7 +15,7 @@ I conducted a benchmark study on restore reliability by breaking backups on purp
 
 ## At a glance
 
-| | |
+| Aspect | Summary |
 |---|---|
 | **Question** | When a Postgres backup on Kubernetes says `completed`, can you restore it, and what do you get back? |
 | **Approach** | 6 realistic failure modes injected into real backups, each proven applied, each run 3 times in isolation, judged by 3 different checks |
@@ -216,7 +216,7 @@ The benchmark measures the checks. These design choices are what make it safe to
 
 ## Environment
 
-| | |
+| Component | Version |
 |---|---|
 | Kubernetes | K3s v1.35.10, single node |
 | Node | Ubuntu 24.04 VM, 4 vCPU, 8 GiB RAM, virtio disk on NVMe |
