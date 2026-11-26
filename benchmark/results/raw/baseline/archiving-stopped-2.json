@@ -1,0 +1,90 @@
+{
+ "checker": "cronjob",
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "rpc error: code = Unknown desc = unexpected failure invoking barman-cloud-wal-archive: exit status 4",
+    "reason": "ContinuousArchivingFailing",
+    "status": "False"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "cronjob": {
+  "completionTime": "2026-11-25T18:46:14Z",
+  "conditions": [
+   {
+    "reason": "CompletionsReached",
+    "time": "2026-11-25T18:46:14Z",
+    "type": "SuccessCriteriaMet"
+   },
+   {
+    "reason": "CompletionsReached",
+    "time": "2026-11-25T18:46:14Z",
+    "type": "Complete"
+   }
+  ],
+  "failed": 0,
+  "startTime": "2026-11-25T18:44:53Z",
+  "succeeded": 1
+ },
+ "cronjob_log": "cluster.postgresql.cnpg.io/restore-test created\ncluster.postgresql.cnpg.io/restore-test condition met\ncluster.postgresql.cnpg.io \"restore-test\" deleted from cj-archiving-stopped-2 namespace\n",
+ "data_checksums": "on",
+ "fault": {
+  "applied": "archive credentials replaced at 2026-11-25T18:42:51Z",
+  "archiver_failed_count_after_120s": 27
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [
+   "restore-test-run"
+  ],
+  "pods": [
+   "restore-test-run-6tmxk"
+  ],
+  "pvcs": []
+ },
+ "namespace": "cj-archiving-stopped-2",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 2,
+ "run_id": "cj-archiving-stopped-2-20261125184144",
+ "scenario": "archiving-stopped",
+ "seconds_check": 87,
+ "seconds_setup_and_fault": 189,
+ "suite": "baseline"
+}

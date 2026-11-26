@@ -1,0 +1,52 @@
+{
+ "last_run": {
+  "backupID": "20261125T191335",
+  "checks": [
+   {
+    "name": "connect",
+    "passed": true
+   },
+   {
+    "name": "list-databases",
+    "passed": true
+   },
+   {
+    "name": "amcheck/app",
+    "passed": true
+   },
+   {
+    "name": "amcheck/postgres",
+    "passed": true
+   },
+   {
+    "name": "sql/expected-rows",
+    "passed": true
+   },
+   {
+    "name": "freshness",
+    "passed": true
+   }
+  ],
+  "clusterName": "src-20261125-210821",
+  "completionTime": "2026-11-25T21:19:22Z",
+  "dataAge": "0s",
+  "recoveryDuration": "10m49s",
+  "recoveryEndLSN": "2/62000000",
+  "result": "Succeeded",
+  "startTime": "2026-11-25T21:08:21Z",
+  "timeline": 1
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "operator": {
+  "cpu": "4m",
+  "memory": "18Mi"
+ },
+ "run_id": "rel-1913-20261125191307",
+ "run_number": 26,
+ "suite": "reliability"
+}

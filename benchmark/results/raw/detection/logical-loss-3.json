@@ -1,0 +1,162 @@
+{
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "Continuous archiving is working",
+    "reason": "ContinuousArchivingSuccess",
+    "status": "True"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "data_checksums": "on",
+ "fault": {
+  "applied": "deleted rows before backup",
+  "rows_deleted": 50000
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "namespace": "det-logical-loss-3",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 3,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T14:12:52Z",
+    "message": "sql/expected-rows: assertion returned false",
+    "observedGeneration": 1,
+    "reason": "CheckFailed",
+    "status": "False",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "backupID": "20261125T140508",
+    "checks": [
+     {
+      "name": "connect",
+      "passed": true
+     },
+     {
+      "name": "list-databases",
+      "passed": true
+     },
+     {
+      "name": "amcheck/app",
+      "passed": true
+     },
+     {
+      "name": "amcheck/postgres",
+      "passed": true
+     },
+     {
+      "message": "assertion returned false",
+      "name": "sql/expected-rows",
+      "passed": false
+     },
+     {
+      "name": "freshness",
+      "passed": true
+     }
+    ],
+    "clusterName": "src-20261125-141115",
+    "completionTime": "2026-11-25T14:12:52Z",
+    "dataAge": "0s",
+    "message": "sql/expected-rows: assertion returned false",
+    "reason": "CheckFailed",
+    "recoveryDuration": "1m37s",
+    "recoveryEndLSN": "0/25000000",
+    "result": "Failed",
+    "startTime": "2026-11-25T14:11:15Z",
+    "timeline": 1
+   }
+  ],
+  "lastRun": {
+   "backupID": "20261125T140508",
+   "checks": [
+    {
+     "name": "connect",
+     "passed": true
+    },
+    {
+     "name": "list-databases",
+     "passed": true
+    },
+    {
+     "name": "amcheck/app",
+     "passed": true
+    },
+    {
+     "name": "amcheck/postgres",
+     "passed": true
+    },
+    {
+     "message": "assertion returned false",
+     "name": "sql/expected-rows",
+     "passed": false
+    },
+    {
+     "name": "freshness",
+     "passed": true
+    }
+   ],
+   "clusterName": "src-20261125-141115",
+   "completionTime": "2026-11-25T14:12:52Z",
+   "dataAge": "0s",
+   "message": "sql/expected-rows: assertion returned false",
+   "reason": "CheckFailed",
+   "recoveryDuration": "1m37s",
+   "recoveryEndLSN": "0/25000000",
+   "result": "Failed",
+   "startTime": "2026-11-25T14:11:15Z",
+   "timeline": 1
+  },
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "det-logical-loss-3-20261125140433",
+ "scenario": "logical-loss",
+ "seconds_check": 341,
+ "seconds_setup_and_fault": 162,
+ "suite": "detection"
+}

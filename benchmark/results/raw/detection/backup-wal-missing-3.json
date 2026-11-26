@@ -1,0 +1,101 @@
+{
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "Continuous archiving is working",
+    "reason": "ContinuousArchivingSuccess",
+    "status": "True"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "data_checksums": "on",
+ "fault": {
+  "backup": "20261125T141409",
+  "begin_wal": "000000010000000000000004",
+  "deleted": "det-backup-wal-missing-3-20261125141327/src/wals/0000000100000000/000000010000000000000004.gz",
+  "end_wal": "000000010000000000000004",
+  "ok": true
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "namespace": "det-backup-wal-missing-3",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 3,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T14:38:16Z",
+    "message": "job src-20261125-142652-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-backup-wal-missing-3 job/src-20261125-142652-1-full-recovery",
+    "observedGeneration": 1,
+    "reason": "RecoveryFailed",
+    "status": "False",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "clusterName": "src-20261125-142652",
+    "completionTime": "2026-11-25T14:38:16Z",
+    "message": "job src-20261125-142652-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-backup-wal-missing-3 job/src-20261125-142652-1-full-recovery",
+    "reason": "RecoveryFailed",
+    "result": "Failed",
+    "startTime": "2026-11-25T14:26:52Z"
+   }
+  ],
+  "lastRun": {
+   "clusterName": "src-20261125-142652",
+   "completionTime": "2026-11-25T14:38:16Z",
+   "message": "job src-20261125-142652-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-backup-wal-missing-3 job/src-20261125-142652-1-full-recovery",
+   "reason": "RecoveryFailed",
+   "result": "Failed",
+   "startTime": "2026-11-25T14:26:52Z"
+  },
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "det-backup-wal-missing-3-20261125141327",
+ "scenario": "backup-wal-missing",
+ "seconds_check": 1409,
+ "seconds_setup_and_fault": 85,
+ "suite": "detection"
+}

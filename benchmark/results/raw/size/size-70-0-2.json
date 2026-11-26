@@ -1,0 +1,117 @@
+{
+ "backup_started": "2026-11-25T15:10:29Z",
+ "backup_stopped": "2026-11-25T15:10:49Z",
+ "bucket": {
+  "base_bytes": 1132023200,
+  "bytes": 1185197696,
+  "objects": 65,
+  "wal_bytes": 53174496
+ },
+ "db_bytes": 1105868479,
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "load_seconds": 0,
+ "rep": 2,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T15:13:03Z",
+    "message": "last run succeeded",
+    "observedGeneration": 1,
+    "reason": "Succeeded",
+    "status": "True",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "backupID": "20261125T151029",
+    "checks": [
+     {
+      "name": "connect",
+      "passed": true
+     },
+     {
+      "name": "list-databases",
+      "passed": true
+     },
+     {
+      "name": "amcheck/app",
+      "passed": true
+     },
+     {
+      "name": "amcheck/postgres",
+      "passed": true
+     },
+     {
+      "name": "sql/expected-rows",
+      "passed": true
+     },
+     {
+      "name": "freshness",
+      "passed": true
+     }
+    ],
+    "clusterName": "src-20261125-151129",
+    "completionTime": "2026-11-25T15:13:03Z",
+    "dataAge": "0s",
+    "recoveryDuration": "1m23s",
+    "recoveryEndLSN": "0/42000000",
+    "result": "Succeeded",
+    "startTime": "2026-11-25T15:11:29Z",
+    "timeline": 1
+   }
+  ],
+  "lastRun": {
+   "backupID": "20261125T151029",
+   "checks": [
+    {
+     "name": "connect",
+     "passed": true
+    },
+    {
+     "name": "list-databases",
+     "passed": true
+    },
+    {
+     "name": "amcheck/app",
+     "passed": true
+    },
+    {
+     "name": "amcheck/postgres",
+     "passed": true
+    },
+    {
+     "name": "sql/expected-rows",
+     "passed": true
+    },
+    {
+     "name": "freshness",
+     "passed": true
+    }
+   ],
+   "clusterName": "src-20261125-151129",
+   "completionTime": "2026-11-25T15:13:03Z",
+   "dataAge": "0s",
+   "recoveryDuration": "1m23s",
+   "recoveryEndLSN": "0/42000000",
+   "result": "Succeeded",
+   "startTime": "2026-11-25T15:11:29Z",
+   "timeline": 1
+  },
+  "lastSuccessTime": "2026-11-25T15:13:03Z",
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "size-70-0-2-20261125150932",
+ "scale": 70,
+ "seconds_check": 96,
+ "seconds_setup": 118,
+ "storage": "5Gi",
+ "suite": "size",
+ "wal_bytes_after_backup": 0
+}

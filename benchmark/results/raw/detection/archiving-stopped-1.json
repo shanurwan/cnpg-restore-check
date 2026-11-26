@@ -1,0 +1,160 @@
+{
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "rpc error: code = Unknown desc = unexpected failure invoking barman-cloud-wal-archive: exit status 4",
+    "reason": "ContinuousArchivingFailing",
+    "status": "False"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "data_checksums": "on",
+ "fault": {
+  "applied": "archive credentials replaced at 2026-11-25T13:04:03Z",
+  "archiver_failed_count_after_120s": 27
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "namespace": "det-archiving-stopped-1",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 1,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T13:13:34Z",
+    "message": "newest restored data is 8m12s old, objective 1m0s",
+    "observedGeneration": 1,
+    "reason": "ObjectiveMissed",
+    "status": "False",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "backupID": "20261125T130334",
+    "checks": [
+     {
+      "name": "connect",
+      "passed": true
+     },
+     {
+      "name": "list-databases",
+      "passed": true
+     },
+     {
+      "name": "amcheck/app",
+      "passed": true
+     },
+     {
+      "name": "amcheck/postgres",
+      "passed": true
+     },
+     {
+      "name": "sql/expected-rows",
+      "passed": true
+     },
+     {
+      "name": "freshness",
+      "passed": true
+     }
+    ],
+    "clusterName": "src-20261125-131205",
+    "completionTime": "2026-11-25T13:13:34Z",
+    "dataAge": "8m12s",
+    "message": "newest restored data is 8m12s old, objective 1m0s",
+    "reason": "ObjectiveMissed",
+    "recoveryDuration": "1m18s",
+    "recoveryEndLSN": "0/8000000",
+    "result": "Failed",
+    "startTime": "2026-11-25T13:12:05Z",
+    "timeline": 1
+   }
+  ],
+  "lastRun": {
+   "backupID": "20261125T130334",
+   "checks": [
+    {
+     "name": "connect",
+     "passed": true
+    },
+    {
+     "name": "list-databases",
+     "passed": true
+    },
+    {
+     "name": "amcheck/app",
+     "passed": true
+    },
+    {
+     "name": "amcheck/postgres",
+     "passed": true
+    },
+    {
+     "name": "sql/expected-rows",
+     "passed": true
+    },
+    {
+     "name": "freshness",
+     "passed": true
+    }
+   ],
+   "clusterName": "src-20261125-131205",
+   "completionTime": "2026-11-25T13:13:34Z",
+   "dataAge": "8m12s",
+   "message": "newest restored data is 8m12s old, objective 1m0s",
+   "reason": "ObjectiveMissed",
+   "recoveryDuration": "1m18s",
+   "recoveryEndLSN": "0/8000000",
+   "result": "Failed",
+   "startTime": "2026-11-25T13:12:05Z",
+   "timeline": 1
+  },
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "det-archiving-stopped-1-20261125130302",
+ "scenario": "archiving-stopped",
+ "seconds_check": 454,
+ "seconds_setup_and_fault": 183,
+ "suite": "detection"
+}

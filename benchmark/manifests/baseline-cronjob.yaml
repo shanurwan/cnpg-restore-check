@@ -1,0 +1,86 @@
+# Baseline: the do-it-yourself restore test many teams run instead of a dedicated tool.
+# A CronJob creates a recovery Cluster from the latest backup, waits for it to be Ready,
+# passes if it does, then deletes it. No data checks.
+# The job's own ServiceAccount and Role must not share the cluster's name: CloudNativePG creates a
+# ServiceAccount and Role named after each cluster and would overwrite them.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restore-test-runner
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: restore-test-runner
+rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restore-test-runner
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: restore-test-runner}
+subjects:
+  - {kind: ServiceAccount, name: restore-test-runner}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restore-test
+data:
+  cluster.yaml: |
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    metadata:
+      name: restore-test
+    spec:
+      instances: 1
+      storage:
+        size: 2Gi
+      bootstrap:
+        recovery:
+          source: origin
+      externalClusters:
+        - name: origin
+          plugin:
+            name: barman-cloud.cloudnative-pg.io
+            parameters:
+              barmanObjectName: restore-source
+              serverName: src
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restore-test
+spec:
+  schedule: "0 0 1 1 *"          # triggered by hand in the benchmark (kubectl create job --from)
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1500
+      template:
+        spec:
+          serviceAccountName: restore-test-runner
+          restartPolicy: Never
+          containers:
+            - name: restore-test
+              image: docker.io/alpine/kubectl:1.34.1
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -u
+                  kubectl apply -f /config/cluster.yaml
+                  if kubectl wait cluster/restore-test --for=condition=Ready --timeout=20m; then rc=0; else rc=1; fi
+                  kubectl delete cluster restore-test --wait=false
+                  exit $rc
+              volumeMounts:
+                - {name: config, mountPath: /config}
+              resources:
+                requests: {cpu: 10m, memory: 32Mi}
+                limits: {memory: 128Mi}
+          volumes:
+            - name: config
+              configMap: {name: restore-test}

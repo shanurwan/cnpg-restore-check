@@ -1,0 +1,22 @@
+scenario,rep,cronjob_result,seconds,fault_applied,leftovers
+archiving-stopped,1,pass,96.0,"{""applied"": ""archive credentials replaced at 2026-11-25T18:24:55Z"", ""archiver_failed_count_after_120s"": 27}",0
+archiving-stopped,2,pass,81.0,"{""applied"": ""archive credentials replaced at 2026-11-25T18:42:51Z"", ""archiver_failed_count_after_120s"": 27}",0
+archiving-stopped,3,pass,86.0,"{""applied"": ""archive credentials replaced at 2026-11-25T19:03:51Z"", ""archiver_failed_count_after_120s"": 27}",0
+backup-wal-missing,1,fail,1204.0,"{""backup"": ""20261125T222405"", ""begin_wal"": ""000000010000000000000004"", ""deleted"": ""cj-backup-wal-missing-1-20261125222333/src/wals/0000000100000000/000000010000000000000004.gz"", ""end_wal"": ""000000010000000000000004"", ""ok"": true}",0
+backup-wal-missing,2,fail,1206.0,"{""backup"": ""20261125T182955"", ""begin_wal"": ""000000010000000000000004"", ""deleted"": ""cj-backup-wal-missing-2-20261125182905/src/wals/0000000100000000/000000010000000000000004.gz"", ""end_wal"": ""000000010000000000000004"", ""ok"": true}",0
+backup-wal-missing,3,fail,1205.0,"{""backup"": ""20261125T185154"", ""begin_wal"": ""000000010000000000000004"", ""deleted"": ""cj-backup-wal-missing-3-20261125185112/src/wals/0000000100000000/000000010000000000000004.gz"", ""end_wal"": ""000000010000000000000004"", ""ok"": true}",0
+base-data-deleted,1,fail,1205.0,"{""backup"": ""20261125T224538"", ""deleted"": [""cj-base-data-deleted-1-20261125224509/src/base/20261125T224538/data.tar""], ""ok"": true}",0
+base-data-deleted,2,fail,1205.0,"{""backup"": ""20261125T182957"", ""deleted"": [""cj-base-data-deleted-2-20261125182911/src/base/20261125T182957/data.tar""], ""ok"": true}",0
+base-data-deleted,3,fail,1205.0,"{""backup"": ""20261125T185159"", ""deleted"": [""cj-base-data-deleted-3-20261125185113/src/base/20261125T185159/data.tar""], ""ok"": true}",0
+healthy,1,pass,89.0,"{""applied"": ""none""}",0
+healthy,2,pass,94.0,"{""applied"": ""none""}",0
+healthy,3,pass,89.0,"{""applied"": ""none""}",0
+heap-corruption,1,pass,89.0,"{""backup"": ""20261125T182107"", ""key"": ""cj-heap-corruption-1-20261125182022/src/base/20261125T182107/data.tar"", ""md5_after"": ""5825a60802410acb7feeaf8797621861"", ""md5_before"": ""c0b6fc1596c43a2674f5bf220b925f75"", ""member"": ""base/16385/16392"", ""offset"": 24600, ""ok"": true, ""page"": 3, ""size"": 7659520}",0
+heap-corruption,2,pass,81.0,"{""backup"": ""20261125T183443"", ""key"": ""cj-heap-corruption-2-20261125183408/src/base/20261125T183443/data.tar"", ""md5_after"": ""5825a60802410acb7feeaf8797621861"", ""md5_before"": ""c0b6fc1596c43a2674f5bf220b925f75"", ""member"": ""base/16385/16392"", ""offset"": 24600, ""ok"": true, ""page"": 3, ""size"": 7659520}",0
+heap-corruption,3,pass,81.0,"{""backup"": ""20261125T185550"", ""key"": ""cj-heap-corruption-3-20261125185516/src/base/20261125T185550/data.tar"", ""md5_after"": ""5825a60802410acb7feeaf8797621861"", ""md5_before"": ""c0b6fc1596c43a2674f5bf220b925f75"", ""member"": ""base/16385/16392"", ""offset"": 24600, ""ok"": true, ""page"": 3, ""size"": 7659520}",0
+logical-loss,1,pass,118.0,"{""applied"": ""deleted rows before backup"", ""rows_deleted"": 50000}",0
+logical-loss,2,pass,93.0,"{""applied"": ""deleted rows before backup"", ""rows_deleted"": 50000}",0
+logical-loss,3,pass,95.0,"{""applied"": ""deleted rows before backup"", ""rows_deleted"": 50000}",0
+wal-gap,1,pass,89.0,"{""deleted"": ""cj-wal-gap-1-20261125182021/src/wals/0000000100000000/00000001000000000000000B.gz"", ""ok"": true}",0
+wal-gap,2,pass,81.0,"{""deleted"": ""cj-wal-gap-2-20261125182853/src/wals/0000000100000000/00000001000000000000000A.gz"", ""ok"": true}",0
+wal-gap,3,pass,84.0,"{""deleted"": ""cj-wal-gap-3-20261125185000/src/wals/0000000100000000/00000001000000000000000A.gz"", ""ok"": true}",0

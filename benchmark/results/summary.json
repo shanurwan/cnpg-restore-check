@@ -1,0 +1,8 @@
+{
+ "detection_runs": 21,
+ "reliability_runs": 30,
+ "reliability_succeeded": 30,
+ "reliability_leftovers": 0,
+ "reliability_recovery_median_s": 273.5,
+ "reliability_verdict_median_s": 274.0
+}

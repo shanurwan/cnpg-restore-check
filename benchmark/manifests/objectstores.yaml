@@ -1,0 +1,26 @@
+# Both stores point at s3://backups/PREFIX/ on the shared bench S3 server.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: archive
+spec:
+  configuration:
+    destinationPath: s3://backups/PREFIX/
+    endpointURL: http://s3.bench-s3:9000
+    s3Credentials:
+      accessKeyId: {name: s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: s3, key: ACCESS_SECRET_KEY}
+    wal:
+      compression: gzip
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: restore-source
+spec:
+  configuration:
+    destinationPath: s3://backups/PREFIX/
+    endpointURL: http://s3.bench-s3:9000
+    s3Credentials:
+      accessKeyId: {name: s3, key: ACCESS_KEY_ID}
+      secretAccessKey: {name: s3, key: ACCESS_SECRET_KEY}

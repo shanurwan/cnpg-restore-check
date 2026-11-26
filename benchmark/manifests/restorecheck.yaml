@@ -1,0 +1,26 @@
+# The check under test. Its first run starts as soon as it is created.
+apiVersion: restorecheck.shanurwan.github.io/v1alpha1
+kind: RestoreCheck
+metadata:
+  name: src
+spec:
+  schedule: "0 0 1 1 *"          # effectively never again; the benchmark only uses the first run
+  source:
+    objectStoreName: restore-source
+    serverName: src
+  cluster:
+    storageSize: STORAGE
+  checks:
+    amcheck:
+      heap: true
+    sql:
+      - name: expected-rows
+        database: app
+        query: "SQLCHECK"
+    freshness:
+      database: app
+      query: "select max(ts) from heartbeat"
+  objectives:
+    recoveryTime: 30m
+    dataAge: DATAAGE
+    successAge: 24h

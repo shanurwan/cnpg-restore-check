@@ -1,0 +1,117 @@
+{
+ "backup_started": "2026-11-25T16:26:34Z",
+ "backup_stopped": "2026-11-25T16:26:57Z",
+ "bucket": {
+  "base_bytes": 1132023203,
+  "bytes": 1441668981,
+  "objects": 215,
+  "wal_bytes": 309645778
+ },
+ "db_bytes": 1105868479,
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "load_seconds": 360,
+ "rep": 1,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T16:38:54Z",
+    "message": "last run succeeded",
+    "observedGeneration": 1,
+    "reason": "Succeeded",
+    "status": "True",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "backupID": "20261125T162634",
+    "checks": [
+     {
+      "name": "connect",
+      "passed": true
+     },
+     {
+      "name": "list-databases",
+      "passed": true
+     },
+     {
+      "name": "amcheck/app",
+      "passed": true
+     },
+     {
+      "name": "amcheck/postgres",
+      "passed": true
+     },
+     {
+      "name": "sql/expected-rows",
+      "passed": true
+     },
+     {
+      "name": "freshness",
+      "passed": true
+     }
+    ],
+    "clusterName": "src-20261125-163332",
+    "completionTime": "2026-11-25T16:38:54Z",
+    "dataAge": "0s",
+    "recoveryDuration": "4m55s",
+    "recoveryEndLSN": "0/E8000000",
+    "result": "Succeeded",
+    "startTime": "2026-11-25T16:33:32Z",
+    "timeline": 1
+   }
+  ],
+  "lastRun": {
+   "backupID": "20261125T162634",
+   "checks": [
+    {
+     "name": "connect",
+     "passed": true
+    },
+    {
+     "name": "list-databases",
+     "passed": true
+    },
+    {
+     "name": "amcheck/app",
+     "passed": true
+    },
+    {
+     "name": "amcheck/postgres",
+     "passed": true
+    },
+    {
+     "name": "sql/expected-rows",
+     "passed": true
+    },
+    {
+     "name": "freshness",
+     "passed": true
+    }
+   ],
+   "clusterName": "src-20261125-163332",
+   "completionTime": "2026-11-25T16:38:54Z",
+   "dataAge": "0s",
+   "recoveryDuration": "4m55s",
+   "recoveryEndLSN": "0/E8000000",
+   "result": "Succeeded",
+   "startTime": "2026-11-25T16:33:32Z",
+   "timeline": 1
+  },
+  "lastSuccessTime": "2026-11-25T16:38:54Z",
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "walreplay-70-360-1-20261125162534",
+ "scale": 70,
+ "seconds_check": 327,
+ "seconds_setup": 477,
+ "storage": "5Gi",
+ "suite": "walreplay",
+ "wal_bytes_after_backup": 2593447256
+}

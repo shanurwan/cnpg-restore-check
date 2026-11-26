@@ -1,0 +1,21 @@
+# A helper pod with Python and boto3 for reading and damaging backups in the bench bucket.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: s3tool
+spec:
+  restartPolicy: Always
+  containers:
+    - name: s3tool
+      image: docker.io/library/python:3.12-slim
+      command: ["sh", "-c", "pip install --quiet --no-cache-dir boto3==1.35.99 && sleep infinity"]
+      env:
+        - {name: S3_ENDPOINT, value: "http://s3:9000"}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom: {secretKeyRef: {name: s3, key: ACCESS_KEY_ID}}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom: {secretKeyRef: {name: s3, key: ACCESS_SECRET_KEY}}
+        - {name: AWS_DEFAULT_REGION, value: us-east-1}
+      resources:
+        requests: {cpu: 50m, memory: 128Mi}
+        limits: {memory: 2Gi}

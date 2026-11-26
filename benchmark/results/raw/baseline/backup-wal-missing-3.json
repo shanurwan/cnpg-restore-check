@@ -1,0 +1,93 @@
+{
+ "checker": "cronjob",
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "Continuous archiving is working",
+    "reason": "ContinuousArchivingSuccess",
+    "status": "True"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "cronjob": {
+  "completionTime": null,
+  "conditions": [
+   {
+    "reason": "BackoffLimitExceeded",
+    "time": "2026-11-25T19:12:38Z",
+    "type": "FailureTarget"
+   },
+   {
+    "reason": "BackoffLimitExceeded",
+    "time": "2026-11-25T19:12:38Z",
+    "type": "Failed"
+   }
+  ],
+  "failed": 1,
+  "startTime": "2026-11-25T18:52:33Z",
+  "succeeded": 0
+ },
+ "cronjob_log": "cluster.postgresql.cnpg.io/restore-test created\nerror: timed out waiting for the condition on clusters/restore-test\ncluster.postgresql.cnpg.io \"restore-test\" deleted from cj-backup-wal-missing-3 namespace\n",
+ "data_checksums": "on",
+ "fault": {
+  "backup": "20261125T185154",
+  "begin_wal": "000000010000000000000004",
+  "deleted": "cj-backup-wal-missing-3-20261125185112/src/wals/0000000100000000/000000010000000000000004.gz",
+  "end_wal": "000000010000000000000004",
+  "ok": true
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [
+   "restore-test-run"
+  ],
+  "pods": [
+   "restore-test-run-bjhmm"
+  ],
+  "pvcs": []
+ },
+ "namespace": "cj-backup-wal-missing-3",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 3,
+ "run_id": "cj-backup-wal-missing-3-20261125185112",
+ "scenario": "backup-wal-missing",
+ "seconds_check": 1209,
+ "seconds_setup_and_fault": 82,
+ "suite": "baseline"
+}

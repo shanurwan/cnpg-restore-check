@@ -1,0 +1,117 @@
+{
+ "backup_started": "2026-11-25T22:15:17Z",
+ "backup_stopped": "2026-11-25T22:16:36Z",
+ "bucket": {
+  "base_bytes": 4424838566,
+  "bytes": 4628388020,
+  "objects": 240,
+  "wal_bytes": 203549454
+ },
+ "db_bytes": 4398683839,
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "load_seconds": 0,
+ "rep": 4,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T22:22:40Z",
+    "message": "last run succeeded",
+    "observedGeneration": 1,
+    "reason": "Succeeded",
+    "status": "True",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "backupID": "20261125T221517",
+    "checks": [
+     {
+      "name": "connect",
+      "passed": true
+     },
+     {
+      "name": "list-databases",
+      "passed": true
+     },
+     {
+      "name": "amcheck/app",
+      "passed": true
+     },
+     {
+      "name": "amcheck/postgres",
+      "passed": true
+     },
+     {
+      "name": "sql/expected-rows",
+      "passed": true
+     },
+     {
+      "name": "freshness",
+      "passed": true
+     }
+    ],
+    "clusterName": "src-20261125-221916",
+    "completionTime": "2026-11-25T22:22:40Z",
+    "dataAge": "0s",
+    "recoveryDuration": "2m13s",
+    "recoveryEndLSN": "0/F3000000",
+    "result": "Succeeded",
+    "startTime": "2026-11-25T22:19:16Z",
+    "timeline": 1
+   }
+  ],
+  "lastRun": {
+   "backupID": "20261125T221517",
+   "checks": [
+    {
+     "name": "connect",
+     "passed": true
+    },
+    {
+     "name": "list-databases",
+     "passed": true
+    },
+    {
+     "name": "amcheck/app",
+     "passed": true
+    },
+    {
+     "name": "amcheck/postgres",
+     "passed": true
+    },
+    {
+     "name": "sql/expected-rows",
+     "passed": true
+    },
+    {
+     "name": "freshness",
+     "passed": true
+    }
+   ],
+   "clusterName": "src-20261125-221916",
+   "completionTime": "2026-11-25T22:22:40Z",
+   "dataAge": "0s",
+   "recoveryDuration": "2m13s",
+   "recoveryEndLSN": "0/F3000000",
+   "result": "Succeeded",
+   "startTime": "2026-11-25T22:19:16Z",
+   "timeline": 1
+  },
+  "lastSuccessTime": "2026-11-25T22:22:40Z",
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "size-280-0-4-20261125221307",
+ "scale": 280,
+ "seconds_check": 209,
+ "seconds_setup": 369,
+ "storage": "11Gi",
+ "suite": "size",
+ "wal_bytes_after_backup": 0
+}

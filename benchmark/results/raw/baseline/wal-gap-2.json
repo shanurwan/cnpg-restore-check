@@ -1,0 +1,90 @@
+{
+ "checker": "cronjob",
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "Continuous archiving is working",
+    "reason": "ContinuousArchivingSuccess",
+    "status": "True"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "cronjob": {
+  "completionTime": "2026-11-25T18:33:43Z",
+  "conditions": [
+   {
+    "reason": "CompletionsReached",
+    "time": "2026-11-25T18:33:43Z",
+    "type": "SuccessCriteriaMet"
+   },
+   {
+    "reason": "CompletionsReached",
+    "time": "2026-11-25T18:33:43Z",
+    "type": "Complete"
+   }
+  ],
+  "failed": 0,
+  "startTime": "2026-11-25T18:32:22Z",
+  "succeeded": 1
+ },
+ "cronjob_log": "cluster.postgresql.cnpg.io/restore-test created\ncluster.postgresql.cnpg.io/restore-test condition met\ncluster.postgresql.cnpg.io \"restore-test\" deleted from cj-wal-gap-2 namespace\n",
+ "data_checksums": "on",
+ "fault": {
+  "deleted": "cj-wal-gap-2-20261125182853/src/wals/0000000100000000/00000001000000000000000A.gz",
+  "ok": true
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [
+   "restore-test-run"
+  ],
+  "pods": [
+   "restore-test-run-x4m9p"
+  ],
+  "pvcs": []
+ },
+ "namespace": "cj-wal-gap-2",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 2,
+ "run_id": "cj-wal-gap-2-20261125182853",
+ "scenario": "wal-gap",
+ "seconds_check": 84,
+ "seconds_setup_and_fault": 206,
+ "suite": "baseline"
+}

@@ -1,0 +1,101 @@
+{
+ "cnpg_backups_at_verdict": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_backups_before_check": [
+  {
+   "error": null,
+   "name": "base",
+   "phase": "completed"
+  }
+ ],
+ "cnpg_cluster_at_verdict": {
+  "conditions": {
+   "ConsistentSystemID": {
+    "message": "A single, unique system ID was found across reporting instances.",
+    "reason": "Unique",
+    "status": "True"
+   },
+   "ContinuousArchiving": {
+    "message": "Continuous archiving is working",
+    "reason": "ContinuousArchivingSuccess",
+    "status": "True"
+   },
+   "Initialized": {
+    "message": "Cluster has been bootstrapped",
+    "reason": "BootstrapCompleted",
+    "status": "True"
+   },
+   "LastBackupSucceeded": {
+    "message": "Backup was successful",
+    "reason": "LastBackupSucceeded",
+    "status": "True"
+   },
+   "Ready": {
+    "message": "Cluster is Ready",
+    "reason": "ClusterIsReady",
+    "status": "True"
+   }
+  },
+  "phase": "Cluster in healthy state"
+ },
+ "data_checksums": "on",
+ "fault": {
+  "backup": "20261125T124650",
+  "deleted": [
+   "det-base-data-deleted-1-20261125124618/src/base/20261125T124650/data.tar"
+  ],
+  "ok": true
+ },
+ "leftovers_after_run": {
+  "clusters": [],
+  "jobs": [],
+  "pods": [],
+  "pvcs": []
+ },
+ "namespace": "det-base-data-deleted-1",
+ "orders_relpath": "base/16385/16392",
+ "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "rep": 1,
+ "restorecheck": {
+  "conditions": [
+   {
+    "lastTransitionTime": "2026-11-25T12:59:57Z",
+    "message": "job src-20261125-124822-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-base-data-deleted-1 job/src-20261125-124822-1-full-recovery",
+    "observedGeneration": 1,
+    "reason": "RecoveryFailed",
+    "status": "False",
+    "type": "LastRunSucceeded"
+   }
+  ],
+  "history": [
+   {
+    "clusterName": "src-20261125-124822",
+    "completionTime": "2026-11-25T12:59:57Z",
+    "message": "job src-20261125-124822-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-base-data-deleted-1 job/src-20261125-124822-1-full-recovery",
+    "reason": "RecoveryFailed",
+    "result": "Failed",
+    "startTime": "2026-11-25T12:48:22Z"
+   }
+  ],
+  "lastRun": {
+   "clusterName": "src-20261125-124822",
+   "completionTime": "2026-11-25T12:59:57Z",
+   "message": "job src-20261125-124822-1-full-recovery failed (BackoffLimitExceeded: Job has reached the specified backoff limit); inspect it with: kubectl logs -n det-base-data-deleted-1 job/src-20261125-124822-1-full-recovery",
+   "reason": "RecoveryFailed",
+   "result": "Failed",
+   "startTime": "2026-11-25T12:48:22Z"
+  },
+  "nextRunTime": "2027-01-01T00:00:00Z",
+  "observedGeneration": 1
+ },
+ "run_id": "det-base-data-deleted-1-20261125124618",
+ "scenario": "base-data-deleted",
+ "seconds_check": 757,
+ "seconds_setup_and_fault": 63,
+ "suite": "detection"
+}

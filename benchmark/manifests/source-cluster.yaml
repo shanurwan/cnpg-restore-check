@@ -1,0 +1,23 @@
+# The database whose backups are checked.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: src
+spec:
+  instances: 1
+  storage:
+    size: STORAGE
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      postInitApplicationSQL:
+        - CREATE TABLE heartbeat (ts timestamptz NOT NULL DEFAULT now())
+        - CREATE TABLE orders (id bigserial PRIMARY KEY, note text NOT NULL)
+        - ALTER TABLE heartbeat OWNER TO app
+        - ALTER TABLE orders OWNER TO app
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: archive
