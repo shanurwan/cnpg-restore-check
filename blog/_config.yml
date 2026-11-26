@@ -6,6 +6,8 @@ url: https://shanurwan.github.io
 baseurl: /cnpg-restore-check
 github_username: shanurwan
 theme: minima
+# Show a post as soon as it is published, even if its date is later.
+future: true
 plugins:
   - jekyll-feed
 markdown: kramdown
